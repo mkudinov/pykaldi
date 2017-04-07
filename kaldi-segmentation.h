@@ -16,6 +16,10 @@
 
 using std::vector;
 using std::string;
+typedef void* p_ContextTree;
+typedef int* p_DisambiguationSymbols;
+typedef void* p_TransitionModel;
+typedef void* p_VectorFst;
 
 extern "C"
 {
@@ -32,7 +36,12 @@ enum
 /*VARIABLES TO STORE TEMPORARY RESULTS*/
 
 /* INTERFACE FUNCTION */
-void GetAligner(char *i_tree_rxfilename, char *i_disambig_rxfilename, char *i_model_rxfilename, char *i_lex_rxfilename, char *i_transcript_rspecifier,  char *i_fsts_wspecifier);
+void GetAligner(p_ContextTree i_context_tree, 
+                p_DisambiguationSymbols i_disambiguation_symbols, 
+                int i_size_of_disambiguation_symbols,
+                p_TransitionModel i_transition_model, 
+                p_VectorFst i_lex_fst, 
+                int *o_err_code);
 //size_t GetAlignment(char * i_key, int* o_err_code);
 /* TRANSFER TO PYTHON */
 //int GetNextPhone(int i_index, int* o_err_code);

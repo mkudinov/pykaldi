@@ -36,20 +36,46 @@ typedef struct
     int *phones;
     int *num_repeats_per_phone;
 } Alignment;
-/* INTERFACE FUNCTION */
+
+typedef struct
+{
+    int number_of_elements;
+    int *elements;
+} IntegerVector;
+
+/* class AlignmentReader */
 void *GetAlignmentReader(char *i_specifier,  int *o_err_code);
-void *GetTransitionModel(char *i_transition_model_filename, int *o_err_code);
-size_t ReadAlignment(char *i_key, void *i_transition_model, void *i_alignment_reader, Alignment *o_alignment_buffer, int *o_err_code);
-void *GetFeatureReader(char *i_specifier, int *o_err_code);
-const void *ReadFeatureMatrix(char *i_key, void *i_feature_reader, int *o_n_rows, int *o_n_columns, int *o_err_code);
-/* TRANSFER TO PYTHON */
-Alignment *GetResultBuffer();
-void CopyFeatureMatrix(void *i_source, void *o_destination, int *o_err_code);
-/* CLEAR MEMORY */
-void DeleteTransitionModel(void *o_transition_model);
 void DeleteAlignmentReader(void *o_alignment_reader);
-void DeleteResultBuffer(Alignment *o_alignment_buffer);
+size_t ReadAlignment(char *i_key, void *i_transition_model, void *i_alignment_reader, Alignment *o_alignment_buffer, int *o_err_code);
+
+/* class TransitionModel*/
+void *GetTransitionModel(char *i_transition_model_filename, int *o_err_code);
+void DeleteTransitionModel(void *o_transition_model);
+
+/* class FeatureReader*/
+void *GetFeatureReader(char *i_specifier, int *o_err_code);
 void DeleteFeatureReader(void *o_feature_reader);
-}
-}
+
+/* class FeatureMatrix */
+//Non-possessive pointer to feature matrix
+const void *ReadFeatureMatrix(char *i_key, void *i_feature_reader, int *o_n_rows, int *o_n_columns, int *o_err_code);
+void CopyFeatureMatrix(void *i_source, void *o_destination, int *o_err_code);
+
+/* class ResultBuffer*/
+Alignment *GetResultBuffer(int *o_err_code);
+void DeleteResultBuffer(Alignment *o_alignment_buffer);
+
+/* class ContextTree*/
+void *GetContextTree(char *i_specifier, int *o_err_code);
+void DeleteContextTree(void *o_context_tree);
+
+/* class IntegerVector*/
+int *ReadIntegerVector(char *i_specifier, int *o_n_elements, int *o_err_code);
+void DeleteIntegerVector(int *o_vector);
+void CopyIntegerVector(int *i_source, int i_size, void *o_destination, int *o_err_code);
+
+void *GetKaldiFst(char *i_specifier, int *o_err_code);   
+void DeleteKaldiFst(void *fst);
+} //namespace python_data_readers
+} //extern "C"
 #endif

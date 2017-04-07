@@ -5,42 +5,20 @@ extern "C"
 {
 namespace python_segmentation
 {
-void GetAligner(char *i_tree_rxfilename, char *i_disambig_rxfilename, char *i_model_rxfilename, char *i_lex_rxfilename, char *i_fsts_wspecifier, int *o_err_code)
+    void GetAligner(p_ContextTree i_context_tree, 
+                p_DisambiguationSymbols i_disambiguation_symbols, 
+                int i_size_of_disambiguation_symbols,
+                p_TransitionModel i_transition_model, 
+                p_VectorFst i_lex_fst, 
+                int *o_err_code);
 {
     *o_err_code = OK;
     kaldi::TrainingGraphCompilerOptions gopts;
     gopts.transition_scale = 0.0; 
     gopts.self_loop_scale = 0.0; 
-    kaldi::ContextDependency ctx_dep;  // the tree.
-    kaldi::TransitionModel trans_model;
     try
     {
-        kaldi::ReadKaldiObject(i_tree_rxfilename, &ctx_dep);
-        kaldi::ReadKaldiObject(i_model_rxfilename, &trans_model);
-    }
-    catch(...)
-    {
-        *o_err_code = ERROR_OPENING;
-        return;
-    }
-    // need VectorFst because we will change it by adding subseq symbol.
-    fst::VectorFst<fst::StdArc> *lex_fst = fst::ReadFstKaldi(i_lex_rxfilename);
-    if(!lex_fst)
-    {
-        *o_err_code = ERROR_OPENING;
-        return;
-    }
-    vector<int32> disambig_syms;
-    if (!kaldi::ReadIntegerVectorSimple(i_disambig_rxfilename, &disambig_syms))
-    {   
-        KALDI_ERR << "fstcomposecontext: Could not read disambiguation symbols from "
-                  << i_disambig_rxfilename;
-        *o_err_code = ERROR_OPENING;
-        return;
-    }
-    try
-    {
-        kaldi::TrainingGraphCompiler gc(trans_model, ctx_dep, lex_fst, disambig_syms, gopts);
+        kaldi::TrainingGraphCompiler gc(i_transition_model, i_context_treet, i_lex_fst, i_disambig_syms, gopts);
     }
     catch(...)
     {
