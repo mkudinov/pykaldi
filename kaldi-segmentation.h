@@ -12,7 +12,12 @@
 #include "../tree/context-dep.h"
 #include "../fstext/fstext-lib.h"
 #include "../decoder/training-graph-compiler.h"
+#include "../decoder/decoder-wrappers.h"
+#include "../decoder/faster-decoder.h"
 #include "../tree/context-dep.h"
+#include "../gmm/am-diag-gmm.h"
+#include "../hmm/hmm-utils.h"
+#include "../gmm/decodable-am-diag-gmm.h"
 using namespace kaldi_python_common;
 
 extern "C"
@@ -37,14 +42,15 @@ void DeleteAlignerFst(void *o_aligner_fst);
 /* Main function*/
 Alignment *Align(void *i_features
                , void *i_transition_model
-               , void* i_acoustic_model
+               , void *i_acoustic_model
                , void *i_aligner_fst
                , float i_acoustic_scale
                , float i_transition_scale
                , float i_self_loop_scale
                , float i_beam
-               , float i_retry
+               , float i_retry_beam
+               , bool i_careful
                , int *o_err_code);
-}
-}
+} //namespace python_segmantation
+} //extern "C"
 #endif

@@ -2,11 +2,11 @@ all:
 
 include ../kaldi.mk
 
-OBJFILES = read-kaldi-data.o kaldi-segmentation.o
+OBJFILES = kaldi-python-common.o read-kaldi-data.o kaldi-segmentation.o
 
-LIBNAME = python-kaldi-data-read
+LIBNAME = python-kaldi
 
-ADDLIBS = ../base/kaldi-base.a ../util/kaldi-util.a  ../matrix/kaldi-matrix.a ../hmm/kaldi-hmm.a ../fstext/kaldi-fstext.a ../tree/kaldi-tree.a ../decoder/kaldi-decoder.a ../matrix/kaldi-matrix.o
+ADDLIBS = ../base/kaldi-base.a ../util/kaldi-util.a  ../matrix/kaldi-matrix.a ../hmm/kaldi-hmm.a ../fstext/kaldi-fstext.a ../tree/kaldi-tree.a ../decoder/kaldi-decoder.a ../matrix/kaldi-matrix.o ../gmm/kaldi-gmm.a
 
 LIBFILE = lib$(LIBNAME).so
 

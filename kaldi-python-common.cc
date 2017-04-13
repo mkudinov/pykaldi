@@ -11,11 +11,11 @@ Alignment *CreateAlignmentBuffer(int i_number_of_phones, int *o_err_code)
         *o_err_code = MEMORY_ALLOCATION_ERROR;
         return 0;
     }
-    alignment_buffer->phones = i_number_of_phones;
+    alignment_buffer->number_of_phones = i_number_of_phones;
     try
     {
         alignment_buffer->num_repeats_per_phone = new int[i_number_of_phones];
-        alignment_buffer->number_of_phones = new int[i_number_of_phones];
+        alignment_buffer->phones = new int[i_number_of_phones];
     }
     catch(...)
     {

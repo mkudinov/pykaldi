@@ -23,7 +23,7 @@ void* GetTextFstCompiler(void *i_context_tree,
     {
         // ownership will be taken by gc.
         fst::VectorFst<fst::StdArc> *lex_fst = fst::ReadFstKaldi(i_lex_in_filename);
-        gc = new kaldi::TrainingGraphCompiler(i_transition_model, i_context_tree, lex_fst, disambig_syms, gopts);
+        gc = new kaldi::TrainingGraphCompiler(*transition_model, *context_tree, lex_fst, disambig_syms, gopts);
     }
     catch(...)
     {
@@ -46,7 +46,7 @@ void *GetAlignerFst(void *i_text_fst_compiler, int *i_transcript, int i_transcri
 {
     *o_err_code = OK;
     kaldi::TrainingGraphCompiler* compiler = static_cast<kaldi::TrainingGraphCompiler*>(i_text_fst_compiler);
-    fst::VectorFst<StdArc> *aligner_fst = new fst::VectorFst<StdArc>(); 
+    fst::VectorFst<fst::StdArc> *aligner_fst = new fst::VectorFst<fst::StdArc>(); 
     vector<int32> transcript(i_transcript, i_transcript + i_transcript_len);
     if (!compiler->CompileGraphFromText(transcript, aligner_fst)) 
     {
@@ -66,31 +66,31 @@ void DeleteAlignerFst(void *o_aligner_fst)
 {
     if (o_aligner_fst)
     {
-        delete static_cast<fst::VectorFst<StdArc>*>(o_aligner_fst); 
+        delete static_cast<fst::VectorFst<fst::StdArc>*>(o_aligner_fst); 
         o_aligner_fst = 0;
     }
 }
 
 Alignment *Align(void *i_features
                , void *i_transition_model
-               , void* i_acoustic_model
+               , void *i_acoustic_model
                , void *i_aligner_fst
                , float i_acoustic_scale
                , float i_transition_scale
                , float i_self_loop_scale
-               , float i_beam,
-               , float i_retry
+               , float i_beam
+               , float i_retry_beam
+               , bool i_careful
                , int *o_err_code)
 { 
     *o_err_code = OK;
-    Matrix<BaseFloat> *features = static_cast<Matrix<BaseFloat>*>(i_features);
-    fst::VectorFst<StdArc> *aligner_fst = static_cast<fst::VectorFst<StdArc>*>(i_aligner_fst);
+    kaldi::Matrix<kaldi::BaseFloat> *features = static_cast<kaldi::Matrix<kaldi::BaseFloat>*>(i_features);
+    fst::VectorFst<fst::StdArc> *aligner_fst = static_cast<fst::VectorFst<fst::StdArc>*>(i_aligner_fst);
     kaldi::TransitionModel *transition_model = static_cast<kaldi::TransitionModel *>(i_transition_model); 
     kaldi::AmDiagGmm* acoustic_model = static_cast<kaldi::AmDiagGmm*>(i_acoustic_model);
     if (features->NumRows() == 0) 
     {
-        KALDI_WARN << "Zero-length utterance: " << utt;
-        num_err++;
+        KALDI_WARN << "Zero-length utterance";
         *o_err_code = WRONG_INPUT;
         return 0;
     }
@@ -101,22 +101,21 @@ Alignment *Align(void *i_features
 //TODO: Maybe AddTransitionProbs is not necessary
     {// Add transition-probs to the FST.
      std::vector<int32> disambig_syms;  // empty.
-     AddTransitionProbs(*transition_model, disambig_syms,
+     kaldi::AddTransitionProbs(*transition_model, disambig_syms,
                              i_transition_scale, i_self_loop_scale,
-                             *aligner_fst);
+                             aligner_fst);
     }
-    DecodableAmDiagGmmScaled gmm_decodable(*acoustic_model, *transition_model, *features,
+    kaldi::DecodableAmDiagGmmScaled gmm_decodable(*acoustic_model, *transition_model, *features,
                                                i_acoustic_scale);
-    o_num_error = 0;
     if ((i_retry_beam != 0 && i_retry_beam <= i_beam) || i_beam <= 0.0) 
     {
-        KALDI_ERR << "Beams do not make sense: beam " << i_config.beam
-                                  << ", retry-beam " << i_config.retry_beam;
+        KALDI_ERR << "Beams do not make sense: beam " << i_beam
+                                  << ", retry-beam " << i_retry_beam;
         *o_err_code = KALDI_WRONG_CONFIGURATION;
         return 0;
     }
       
-    if (fst->Start() == fst::kNoStateId) 
+    if (aligner_fst->Start() == fst::kNoStateId) 
     {
         KALDI_WARN << "Empty decoding graph";
         *o_err_code = WRONG_INPUT;
@@ -125,33 +124,33 @@ Alignment *Align(void *i_features
 
     fst::StdArc::Label special_symbol = 0;
        if (i_careful)
-                ModifyGraphForCarefulAlignment(fst);
-        
-    FasterDecoderOptions decode_opts;
+               kaldi::ModifyGraphForCarefulAlignment(aligner_fst);
+    int num_retried = 0; 
+    kaldi::FasterDecoderOptions decode_opts;
     decode_opts.beam = i_beam;
-    FasterDecoder decoder(*fst, decode_opts);
-    decoder.Decode(decodable);                
+    kaldi::FasterDecoder decoder(*aligner_fst, decode_opts);
+    decoder.Decode(&gmm_decodable);                
     bool ans = decoder.ReachedFinal();  // consider only final states.
                          
     if (!ans && i_retry_beam != 0.0) 
     {
-        if (num_retried != NULL) (*num_retried)++;
-             KALDI_WARN << "Retrying utterance " << utt << " with beam " << config.retry_beam;
+        if (num_retried != 0) num_retried++;
+             KALDI_WARN << "Retrying utterance with beam " << i_retry_beam;
         decode_opts.beam = i_retry_beam;
         decoder.SetOptions(decode_opts);
-        decoder.Decode(decodable);
+        decoder.Decode(&gmm_decodable);
         ans = decoder.ReachedFinal();
     }
                           
     if (!ans) 
     {  // Still did not reach final state.
-        KALDI_WARN << "Did not successfully decode file " << utt << ", len = "
-                            << decodable->NumFramesReady();
-        if (num_error != NULL) (*num_error)++;
-            return;
+        KALDI_WARN << "Did not successfully decode file, len = "
+                            << gmm_decodable.NumFramesReady();
+        *o_err_code = WRONG_INPUT;
+         return 0;
     }
                                
-    fst::VectorFst<LatticeArc> decoded;  // linear FST.
+    fst::VectorFst<kaldi::LatticeArc> decoded;  // linear FST.
     decoder.GetBestPath(&decoded);
     if (decoded.NumStates() == 0) 
     {
@@ -164,8 +163,8 @@ Alignment *Align(void *i_features
     std::vector<int32> words;
     kaldi::LatticeWeight weight;
                                                
-    GetLinearSymbolSequence(decoded, &alignment, &words, &weight);
-    BaseFloat like = -(weight.Value1()+weight.Value2()) / acoustic_scale;
+    fst::GetLinearSymbolSequence(decoded, &alignment, &words, &weight);
+    //kaldi::BaseFloat like = -(weight.Value1()+weight.Value2()) / i_acoustic_scale;
     std::vector<std::vector<int32> > split;
     kaldi::SplitToPhones(*transition_model, alignment, &split);
     Alignment *result = CreateAlignmentBuffer(split.size(), o_err_code);
