@@ -5,51 +5,46 @@
 #ifndef PYTHON_KALDI_SEGMENTATION
 #define PYTHON_KALDI_SEGMENTATION
 
-#include <vector>
-#include <string>
+#include "kaldi-python-common.h"
 #include "../base/kaldi-common.h"
 #include "../util/common-utils.h"
 #include "../hmm/transition-model.h"
 #include "../tree/context-dep.h"
 #include "../fstext/fstext-lib.h"
 #include "../decoder/training-graph-compiler.h"
-
-using std::vector;
-using std::string;
-typedef void* p_ContextTree;
-typedef int* p_DisambiguationSymbols;
-typedef void* p_TransitionModel;
-typedef void* p_VectorFst;
+#include "../tree/context-dep.h"
+using namespace kaldi_python_common;
 
 extern "C"
 {
 namespace python_segmentation
 {
-enum
-{
-    OK,
-    ERROR_OPENING,
-    NO_KEY,
-    INDEX_OUT_OF_BOUNDS,
-    NO_READER_EXIST
-};
-/*VARIABLES TO STORE TEMPORARY RESULTS*/
+/*Fst compiler to assemble aligner for phrase*/
+void* GetTextFstCompiler(void *i_context_tree
+                       , int *i_disambiguation_symbols
+                       , int i_size_of_disambiguation_symbols
+                       , void *i_transition_model
+                       , char *i_lex_in_filename
+                       , int *o_err_code);
+void DeleteTextFstCompiler(void *o_compiler);
 
-/* INTERFACE FUNCTION */
-void GetAligner(p_ContextTree i_context_tree, 
-                p_DisambiguationSymbols i_disambiguation_symbols, 
-                int i_size_of_disambiguation_symbols,
-                p_TransitionModel i_transition_model, 
-                p_VectorFst i_lex_fst, 
-                int *o_err_code);
-//size_t GetAlignment(char * i_key, int* o_err_code);
-/* TRANSFER TO PYTHON */
-//int GetNextPhone(int i_index, int* o_err_code);
-//int GetNextLength(int i_index, int* o_err_code);
-
-/* CLEAR MEMORY */
-//void DeleteAligner();
-//void ClearTempVariables();
+/*Fst for the phrase*/
+void *GetAlignerFst(void *i_text_fst_compiler
+                  , int *i_transcript
+                  , int i_transcript_len
+                  , int *o_err_code);
+void DeleteAlignerFst(void *o_aligner_fst);
+/* Main function*/
+Alignment *Align(void *i_features
+               , void *i_transition_model
+               , void* i_acoustic_model
+               , void *i_aligner_fst
+               , float i_acoustic_scale
+               , float i_transition_scale
+               , float i_self_loop_scale
+               , float i_beam
+               , float i_retry
+               , int *o_err_code);
 }
 }
 #endif

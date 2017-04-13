@@ -2,7 +2,7 @@ all:
 
 include ../kaldi.mk
 
-OBJFILES = read-kaldi-data.o #kaldi-segmentation.o
+OBJFILES = read-kaldi-data.o kaldi-segmentation.o
 
 LIBNAME = python-kaldi-data-read
 

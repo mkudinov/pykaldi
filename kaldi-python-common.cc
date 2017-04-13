@@ -1,0 +1,40 @@
+#include "kaldi-python-common.h"
+
+namespace kaldi_python_common
+{
+Alignment *CreateAlignmentBuffer(int i_number_of_phones, int *o_err_code)
+{
+    *o_err_code = OK;
+    Alignment *alignment_buffer = new Alignment;
+    if(!alignment_buffer) 
+    {
+        *o_err_code = MEMORY_ALLOCATION_ERROR;
+        return 0;
+    }
+    alignment_buffer->phones = i_number_of_phones;
+    try
+    {
+        alignment_buffer->num_repeats_per_phone = new int[i_number_of_phones];
+        alignment_buffer->number_of_phones = new int[i_number_of_phones];
+    }
+    catch(...)
+    {
+        *o_err_code = MEMORY_ALLOCATION_ERROR;
+    }
+    return alignment_buffer;
+} 
+
+void DeleteAlignmentBufferr(Alignment *o_alignment_buffer)
+{
+    if(o_alignment_buffer->phones) 
+    {
+        delete[] o_alignment_buffer->phones;
+    }
+    if(o_alignment_buffer->num_repeats_per_phone) 
+    {
+        delete[] o_alignment_buffer->num_repeats_per_phone;
+    }
+    o_alignment_buffer->number_of_phones = 0;
+}
+
+} //namespace kaldi_python_common

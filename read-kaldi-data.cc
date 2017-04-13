@@ -5,18 +5,26 @@ extern "C"
 {
 namespace python_data_readers
 {
-kaldi::RandomAccessBaseFloatMatrixReader* feature_reader;
 
 void *GetAlignmentReader(char *i_specifier, int *o_err_code)
 {
     *o_err_code = OK;
-    string specifier(i_specifier);
+    std::string specifier(i_specifier);
     kaldi::RandomAccessInt32VectorReader *alignment_reader = new kaldi::RandomAccessInt32VectorReader(specifier);
     alignment_reader->HasKey("abc");
     return alignment_reader;
 }
 
-size_t ReadAlignment(char *i_key, void *i_transition_model, void *i_alignment_reader, Alignment *o_alignment_buffer, int *o_err_code)
+void DeleteAlignmentReader(void *o_alignment_reader)
+{
+    if(o_alignment_reader)
+    {
+        delete static_cast<kaldi::RandomAccessInt32VectorReader*>(o_alignment_reader); 
+        o_alignment_reader = 0;
+    }
+}
+
+Alignment *ReadAlignment(char *i_key, void *i_transition_model, void *i_alignment_reader, int *o_err_code)
 {
     *o_err_code = OK;
     if(!i_alignment_reader || !i_transition_model)
@@ -26,36 +34,26 @@ size_t ReadAlignment(char *i_key, void *i_transition_model, void *i_alignment_re
     }
     kaldi::RandomAccessInt32VectorReader* alignment_reader = static_cast<kaldi::RandomAccessInt32VectorReader*>(i_alignment_reader); 
     kaldi::TransitionModel *transition_model = static_cast<kaldi::TransitionModel*>(i_transition_model);
-    string key(i_key);
+    std::string key(i_key);
     if(!alignment_reader->HasKey(key))
     {
         *o_err_code = NO_KEY;
         return 0;
     }
-    vector<int32> alignment;
-    vector<vector<int32> > split;
-    alignment = alignment_reader->Value(key);
-    DeleteResultBuffer(o_alignment_buffer);
+    std::vector<vector<int32> > split;
+    std::vector<int32> alignment = alignment_reader->Value(key);
     kaldi::SplitToPhones(*transition_model, alignment, &split);
-    o_alignment_buffer->number_of_phones = split.size();
-    try
-    {
-        o_alignment_buffer->phones = new int[o_alignment_buffer->number_of_phones];
-        o_alignment_buffer->num_repeats_per_phone = new int[o_alignment_buffer->number_of_phones];
-    }
-    catch(...)
-    {
-        *o_err_code = MEMORY_ALLOCATION_ERROR;
+    Alignment *result = CreateAlignmentBuffer(split.size(), o_err_code);
+    if(*o_err_code != OK)
         return 0;
-    }
     try 
     {
-        for(size_t i = 0; i < o_alignment_buffer->number_of_phones; ++i)
+        for(size_t i = 0; i < result->number_of_phones; ++i)
         {
             int phone = transition_model->TransitionIdToPhone(split[i][0]);
             int num_repeats = split[i].size();
-            o_alignment_buffer->phones[i] = phone;
-            o_alignment_buffer->num_repeats_per_phone[i] = num_repeats;
+            result->phones[i] = phone;
+            result->num_repeats_per_phone[i] = num_repeats;
         }
     }
     catch(...)
@@ -63,46 +61,8 @@ size_t ReadAlignment(char *i_key, void *i_transition_model, void *i_alignment_re
         *o_err_code = INTERNAL_KALDI_ERROR;
         return 0;
     }
-    return o_alignment_buffer->number_of_phones;
+    return result;
 }
-
-void DeleteAlignmentReader(void *o_alignment_reader)
-{
-    kaldi::RandomAccessInt32VectorReader* alignment_reader = static_cast<kaldi::RandomAccessInt32VectorReader*>(o_alignment_reader);  
-    if(alignment_reader)
-        delete alignment_reader;
-    alignment_reader = 0;
-}
-
-
-Alignment *GetResultBuffer(int *o_err_code)
-{
-    *o_err_code = OK;
-    Alignment *alignment_buffer = new Alignment();
-    if(!alignment_buffer) 
-    {
-        *o_err_code = MEMORY_ALLOCATION_ERROR;
-        return 0;
-    }
-    alignment_buffer->phones = 0;
-    alignment_buffer->num_repeats_per_phone = 0;
-    alignment_buffer->number_of_phones = 0;
-    return alignment_buffer;
-} 
-
-void DeleteResultBuffer(Alignment *o_alignment_buffer)
-{
-    if(o_alignment_buffer->phones) 
-    {
-        delete[] o_alignment_buffer->phones;
-    }
-    if(o_alignment_buffer->num_repeats_per_phone) 
-    {
-        delete[] o_alignment_buffer->num_repeats_per_phone;
-    }
-    o_alignment_buffer->number_of_phones = 0;
-}
-
 
 void *GetTransitionModel(char *i_transition_model_filename, int *o_err_code)
 {
@@ -112,16 +72,74 @@ void *GetTransitionModel(char *i_transition_model_filename, int *o_err_code)
     if(!transition_model)
     {
         *o_err_code = ERROR_OPENING;
+        return 0;
     }
     return transition_model;
 }
 
 void DeleteTransitionModel(void *o_transition_model)
 {
-    kaldi::TransitionModel* transition_model = static_cast<kaldi::TransitionModel*>(o_transition_model);
-    if(transition_model)
-        delete transition_model;
-    transition_model = 0;
+    if(o_transition_model) 
+    {
+        delete static_cast<kaldi::TransitionModel*>(o_transition_model);
+        o_transition_model = 0;
+    }
+}
+
+void *GetAcousticModel(char *i_transition_model_filename, int *o_err_code)
+{
+    *o_err_code = OK;
+    kaldi::TransitionModel transition_model;
+    std::string transition_model_filename(i_transition_model_filename); 
+    kaldi::AmDiagGmm* am_gmm = new kaldi::AmDiagGmm();
+    {
+        bool binary;
+        kaldi::Input ki(transition_model_filename, &binary);
+        transition_model.Read(ki.Stream(), binary);
+        am_gmm->Read(ki.Stream(), binary);  
+    }
+    if(!am_gmm)
+    {
+        *o_err_code = ERROR_OPENING;
+        return 0;
+    }
+    return am_gmm;
+
+}
+
+void DeleteAcousticModel(void *o_am_gmm)
+{
+    if(o_am_gmm )
+    {
+        delete static_cast<kaldi::AmDiagGmm*>(o_am_gmm);
+        o_am_gmm = 0;
+    }
+}
+
+void *GetContextTree(char *i_specifier, int *o_err_code)
+{
+    *o_err_code = OK;
+    kaldi::ContextDependency* ctx_dep; // the tree.
+    try
+    {
+        ctx_dep = new kaldi::ContextDependency; 
+        kaldi::ReadKaldiObject(i_specifier, ctx_dep);
+    }
+    catch(...)
+    {
+        *o_err_code = ERROR_OPENING;
+        return 0;
+    }
+    return ctx_dep;
+}
+
+void DeleteContextTree(void *o_context_tree)
+{
+    if(o_context_tree)
+    {
+        delete static_cast<kaldi::ContextDependency*>(o_context_tree);
+        o_context_tree = 0;
+    }
 }
 
 void *GetFeatureReader(char *i_specifier, int *o_err_code)
@@ -130,6 +148,15 @@ void *GetFeatureReader(char *i_specifier, int *o_err_code)
     kaldi::RandomAccessBaseFloatMatrixReader* feature_reader = new kaldi::RandomAccessBaseFloatMatrixReader(i_specifier);
     feature_reader->HasKey("abc");
     return feature_reader;
+}
+
+void DeleteFeatureReader(void *o_feature_reader)
+{
+    if(o_feature_reader)
+    {
+        delete static_cast<kaldi::RandomAccessBaseFloatMatrixReader*>(o_feature_reader); 
+        o_feature_reader = 0;
+    }
 }
 
 const void* ReadFeatureMatrix(char* i_key, void *i_feature_reader, int* o_n_rows, int* o_n_columns, int *o_err_code)
@@ -141,7 +168,7 @@ const void* ReadFeatureMatrix(char* i_key, void *i_feature_reader, int* o_n_rows
         return 0;
     }
     kaldi::RandomAccessBaseFloatMatrixReader* feature_reader = static_cast<kaldi::RandomAccessBaseFloatMatrixReader*>(i_feature_reader); 
-    string key(i_key);
+    std::string key(i_key);
     if(!feature_reader->HasKey(key))
     {
         *o_err_code = NO_KEY;
@@ -172,42 +199,11 @@ void CopyFeatureMatrix(void *i_source, void *o_destination, int *o_err_code)
     }
 }
 
-void DeleteFeatureReader(void *o_feature_reader)
-{
-    kaldi::RandomAccessBaseFloatMatrixReader* feature_reader = static_cast<kaldi::RandomAccessBaseFloatMatrixReader*>(o_feature_reader); 
-    if(feature_reader)
-        delete feature_reader;
-    feature_reader = 0;
-}
-
-void *GetContextTree(char *i_specifier, int *o_err_code);
-{
-    *o_err_code = OK;
-    kaldi::ContextDependency* ctx_dep; // the tree.
-    try
-    {
-        ctx_dep = new ContextDependency(); 
-        kaldi::ReadKaldiObject(i_specifier, ctx_dep);
-    }
-    catch(...)
-    {
-        *o_err_code = ERROR_OPENING;
-        return;
-    }
-    return ctx_dep;
-}
-
-void DeleteContextTree(void *o_context_tree)
-{
-    if(o_context_tree)
-        delete o_context_tree;
-}
-
 int *ReadIntegerVector(char *i_specifier, int *o_n_elements, int *o_err_code)
 {
     *o_err_code = OK;
     vector<int32> tmp;
-    if (!kaldi::ReadIntegerVectorSimple(i_specifier, &disambig_syms))
+    if (!kaldi::ReadIntegerVectorSimple(i_specifier, &tmp))
     {   
         KALDI_ERR << "fstcomposecontext: Could not read disambiguation symbols from "
                   << i_specifier;
@@ -215,7 +211,7 @@ int *ReadIntegerVector(char *i_specifier, int *o_n_elements, int *o_err_code)
         *o_n_elements = 0;
         return 0;
     }
-    *o_n_elements = tmp.size(); 
+    int size = *o_n_elements = tmp.size(); 
     int *destination;
     try
     {
@@ -248,19 +244,6 @@ void CopyIntegerVector(int *i_source, int i_size, void *o_destination, int *o_er
     {
        *o_err_code = MEMORY_ALLOCATION_ERROR; 
     }
-}
-
-void *GetKaldiFst(char *i_specifier, int *o_err_code)
-{ 
-    *o_err_code = OK;
-    fst::VectorFst<fst::StdArc> *fst = fst::ReadFstKaldi(i_lex_rxfilename);
-    if(!fst)
-    {
-        *o_err_code = ERROR_OPENING;
-        return;
-    }
-
-    return fst;
 }
 
 } //namespace python_data_readers
