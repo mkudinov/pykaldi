@@ -1,26 +1,32 @@
-all:
+PYTHONKALDILIBDIR=lib
+SUBDIRS = common readers segmentation
+CLEANSUBDIRS=$(addsuffix .clean,$(SUBDIRS))
+COPYSUBDIRS=$(addsuffix .copy,$(SUBDIRS))
 
-include ../kaldi.mk
+.DEFAULT_GOAL :=
+all: $(SUBDIRS)
+	-echo Done
 
-OBJFILES = kaldi-python-common.o read-kaldi-data.o kaldi-segmentation.o
+.PHONY: $(SUBDIRS)
+$(SUBDIRS) : 
+	$(MAKE) -C $@
 
-LIBNAME = python-kaldi
+.PHONY: clean
+clean: $(CLEANSUBDIRS)
+	-echo Cleaned
 
-ADDLIBS = ../base/kaldi-base.a ../util/kaldi-util.a  ../matrix/kaldi-matrix.a ../hmm/kaldi-hmm.a ../fstext/kaldi-fstext.a ../tree/kaldi-tree.a ../decoder/kaldi-decoder.a ../matrix/kaldi-matrix.o ../gmm/kaldi-gmm.a
+.PHONY: $(CLEANSUBDIRS) 
+$(CLEANSUBDIRS) :
+	$(MAKE) -C $(basename $@) clean
 
-LIBFILE = lib$(LIBNAME).so
+.PHONY: install
+install: mkinstalldir $(COPYSUBDIRS)
+	-echo Installed
 
-LDFLAGS += -Wl,-rpath=$(shell readlink -f $(KALDILIBDIR)) -L.
+.PHONY: $(COPYSUBDIRS) 
+$(COPYSUBDIRS) :
+	mv $(basename $@)/*.so $(PYTHONKALDILIBDIR) 
 
-LDFLAGS += $(foreach dep,$(ADDLIBS), -L$(dir $(dep)))
-LDLIBS  += $(foreach dep,$(ADDLIBS), -l$(notdir $(basename $(dep))) )
-XDEPENDS = $(foreach dep,$(ADDLIBS), $(dir $(dep))/lib$(notdir $(basename $(dep))).so)
-
-all: depend  $(LIBFILE) $(BINFILES)
-
-$(LIBFILE): $(OBJFILES)
-	$(CXX) -shared -fPIC -Wl,-soname=$@ -Wl,--no-undefined -Wl,--as-needed -o $@ $^ $(LDFLAGS) $(XDEPENDS) $(LDLIBS)
-
-depend: 
-	-$(CXX) -M $(CXXFLAGS) *.cc > .depend.mk
-
+.PHONY: mkinstalldir
+mkinstalldir:
+	mkdir -p $(PYTHONKALDILIBDIR)

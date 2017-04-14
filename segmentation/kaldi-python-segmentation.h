@@ -1,11 +1,11 @@
-// python/kaldi-segmentation.h
+// python/segmentation/kaldi-python-segmentation.h
 // SRR
 // Mikhail Kudinov 2017
 
 #ifndef PYTHON_KALDI_SEGMENTATION
 #define PYTHON_KALDI_SEGMENTATION
 
-#include "kaldi-python-common.h"
+#include "../common/kaldi-python-common.h"
 #include "../base/kaldi-common.h"
 #include "../util/common-utils.h"
 #include "../hmm/transition-model.h"

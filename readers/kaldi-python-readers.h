@@ -5,7 +5,7 @@
 #ifndef PYTHON_READ_KALDI_DATA
 #define PYTHON_READ_KALDI_DATA
 
-#include "kaldi-python-common.h"
+#include "common/kaldi-python-common.h"
 #include "../base/kaldi-common.h"
 #include "../util/common-utils.h"
 #include "../hmm/transition-model.h"

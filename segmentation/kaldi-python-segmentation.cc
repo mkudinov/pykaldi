@@ -1,4 +1,4 @@
-#include "kaldi-segmentation.h"
+#include "kaldi-python-segmentation.h"
 
 extern "C"
 {

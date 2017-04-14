@@ -1,4 +1,4 @@
-#include "read-kaldi-data.h"
+#include "kaldi-python-readers.h"
 #include "../hmm/hmm-utils.h"
 #include <iostream>
 extern "C"
