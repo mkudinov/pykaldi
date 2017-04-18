@@ -167,7 +167,7 @@ Alignment *Align(void *i_features
     //kaldi::BaseFloat like = -(weight.Value1()+weight.Value2()) / i_acoustic_scale;
     std::vector<std::vector<int32> > split;
     kaldi::SplitToPhones(*transition_model, alignment, &split);
-    Alignment *result = CreateAlignmentBuffer(split.size(), o_err_code);
+    Alignment *result = kaldi_python_common::CreateAlignmentBuffer(split.size(), o_err_code);
     if(*o_err_code != OK)
         return 0;
     try 

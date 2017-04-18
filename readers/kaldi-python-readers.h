@@ -13,7 +13,8 @@
 #include "../gmm/am-diag-gmm.h"
 
 
-using namespace kaldi_python_common;
+using kaldi_python_common::Alignment;
+using namespace kaldi_python_common_errors;
 extern "C"
 {
 namespace python_data_readers
@@ -67,7 +68,8 @@ void CopyIntegerVector(int *i_source
                      , int i_size
                      , void *o_destination
                      , int *o_err_code);
-
+//from common.h
+void DeleteAlignment(Alignment *o_alignment_buffer);
 } //namespace python_data_readers
 } //extern "C"
 #endif

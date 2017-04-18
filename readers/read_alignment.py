@@ -2,32 +2,23 @@ import cffi
 import numpy as np
 import os
 import pdb
+import sys
+
+if not os.path.isfile('common/constants.py'):
+    print "No import module found in the PYTHONPATH. Please, add current directory to your PYTHON_PATH"
+    exit(1)
+
+from common.constants import KALDI_ERR_CODES as ked
+from common.constants import print_error as print_error
 
 ffi = None
 kaldi_lib = None
-
-#enum
-OK,\
-ERROR_OPENING, \
-NO_KEY, \
-INDEX_OUT_OF_BOUNDS, \
-NO_READER_EXISTS, \
-COPY_ERROR, \
-MEMORY_ALLOCATION_ERROR, \
-INTERNAL_KALDI_ERROR = \
-range(8)
-
-#int error code to string error code
-string_error_codes = ["OK","ERROR_OPENING", "NO_KEY", "INDEX_OUT_OF_BOUNDS", "NO_READER_EXISTS", "COPY_ERROR", "MEMORY_ALLOCATION_ERROR", "INTERNAL_KALDI_ERROR"]
-
-def print_error(error_message):
-    print "ERROR: code {}".format(string_error_codes[error_message])
 
 KALDI_PATH = '/home/mkudinov/KALDI/kaldi_new/kaldi/'
 RUSPEECH_EXP_PATH = 'egs/ruspeech/s1/'
 ALIGNS_PATH = 'exp/tri1/ali.1.gz'
 FEATURE_PATH = 'mfcc/raw_mfcc_train.1.ark'
-LIB_PATH = KALDI_PATH + 'src/python/libpython-kaldi-data-read.so'
+LIB_PATH = 'libpython-kaldi-readers.so'
 PATH_TO_TRANSITION_MODEL = KALDI_PATH + RUSPEECH_EXP_PATH + 'exp/tri1/final.mdl'
 PATH_TO_PHONES_TABLE = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/phones.txt'
 
@@ -39,27 +30,67 @@ def initialize_cffi():
         int *phones;
         int *num_repeats_per_phone;
     } Alignment;  
-    /* INTERFACE FUNCTION */
-    void* GetAlignmentReader(char *i_specifier,  int *o_err_code);
-    void* GetTransitionModel(char *i_transition_model_filename, int *o_err_code);
-    size_t ReadAlignment(char *i_key, void *i_transition_model, void* i_alignment_reader, Alignment *o_alignment_buffer, int *o_err_code);
-    void* GetFeatureReader(char *i_specifier, int *o_err_code);
-    void* ReadFeatureMatrix(char *i_key, void *i_feature_reader, int *o_n_rows, int *o_n_columns, int *o_err_code);
-    /* TRANSFER TO PYTHON */
-    Alignment *GetResultBuffer();
-    void CopyFeatureMatrix(void *i_source, void *o_destination, int *o_err_code);
-    /* CLEAR MEMORY */
-    void DeleteTransitionModel(void *o_transition_model);
+    /* AlignmentReader */
+    void *GetAlignmentReader(char *i_specifier
+                      ,  int *o_err_code);
     void DeleteAlignmentReader(void *o_alignment_reader);
-    void DeleteResultBuffer(Alignment *o_alignment_buffer);
+    Alignment *ReadAlignment(char *i_key
+                       , void *i_transition_model
+                       , void *i_alignment_reader
+                       , int *o_err_code);
+
+    /* TransitionModel*/
+    void *GetTransitionModel(char *i_transition_model_filename
+                       , int *o_err_code);
+    void DeleteTransitionModel(void *o_transition_model);
+
+    /* Acoustic model*/
+    void *GetAcousticModel(char *i_transition_model_filename
+                     , int *o_err_code);
+    void DeleteAcousticModel(void *o_amm_gmm);
+
+    /* ContextTree*/
+    void *GetContextTree(char *i_specifier
+                   , int *o_err_code);
+    void DeleteContextTree(void *o_context_tree);
+
+    /* FeatureReader*/
+    void *GetFeatureReader(char *i_specifier
+                     , int *o_err_code);
     void DeleteFeatureReader(void *o_feature_reader);
+
+    /* FeatureMatrix */
+    //Non-possessive pointer to feature matrix
+    const void *ReadFeatureMatrix(char *i_key
+                            , void *i_feature_reader
+                            , int *o_n_rows
+                            , int *o_n_columns
+                            , int *o_err_code);
+    void CopyFeatureMatrix(void *i_source
+                     , void *o_destination
+                     , int *o_err_code);
+
+    /* IntegerVector*/
+    int *ReadIntegerVector(char *i_specifier
+                     , int *o_n_elements
+                     , int *o_err_code);
+    void DeleteIntegerVector(int *o_vector);
+    void CopyIntegerVector(int *i_source
+                     , int i_size
+                     , void *o_destination
+                     , int *o_err_code);
+
+    void DeleteAlignment(Alignment *o_alignment_buffer);
     """
     global ffi
     global kaldi_lib
     ffi = cffi.FFI()
     ffi.cdef(src)
-    kaldi_lib = ffi.dlopen(LIB_PATH)
-
+    try:
+        kaldi_lib = ffi.dlopen(LIB_PATH)
+    except ImportError:
+        print "Library {} is not found in the LD_LIBRARY_PATH. Please, add ./lib to your LD_LIBRARY_PATH".format(LIB_PATH)
+        exit(1)
 
 class KaldiAlignmentReader(object):
     def __init__(self, path_to_transition_model, path_to_phones_table):
@@ -67,10 +98,10 @@ class KaldiAlignmentReader(object):
         self._ffi = ffi
         self._ptr_last_err_code = self._ffi.new("int*")
         self._open = False
-        self._result_buffer = self._kaldi_lib.GetResultBuffer()
+        self._result_buffer = None 
         self._transition_model = self._kaldi_lib.GetTransitionModel(path_to_transition_model, self._ptr_last_err_code)
         err_code = self._ptr_last_err_code[0]
-        if err_code != OK:
+        if err_code != ked.OK:
             print_error(err_code)
             raise RuntimeError('Error trying to read transition model from file {}'.format(path_to_transition_model))
         self._phone_table = []
@@ -84,21 +115,23 @@ class KaldiAlignmentReader(object):
         if self._open:
             self.close_archive()
         self._kaldi_lib.DeleteTransitionModel(self._transition_model)
-        self._kaldi_lib.DeleteResultBuffer(self._result_buffer)
 
     def get_alignment(self, record_descriptor):
         if not self._open:
             return None
-        alignment_size = self._kaldi_lib.ReadAlignment(record_descriptor, self._transition_model, self._alignment_reader, self._result_buffer, self._ptr_last_err_code)
+        self._result_buffer = self._kaldi_lib.ReadAlignment(record_descriptor, self._transition_model, self._alignment_reader, self._ptr_last_err_code)
         err_code = self._ptr_last_err_code[0]
-        if err_code != OK:
+        if err_code != ked.OK:
             print_error(err_code)
             raise RuntimeError('Error trying to get alignment for descriptor {}'.format(record_descriptor))
+        alignment_size = self._result_buffer.number_of_phones
         alignment = []
         for phone_num in range(alignment_size):
             phone_id = self._result_buffer.phones[phone_num] 
             phone_length = self._result_buffer.num_repeats_per_phone[phone_num]
             alignment.append((phone_id, self._phone_table[phone_id], phone_length))
+        self._kaldi_lib.DeleteAlignment(self._result_buffer)
+        self._result_buffer = None
         return alignment
 
     def open_archive(self, path_to_archive):
@@ -151,7 +184,7 @@ class KaldiFeatureReader(object):
     def get_feature_matrix(self, record_descriptor):
         result_ptr = self._kaldi_lib.ReadFeatureMatrix(record_descriptor, self._feature_reader, self._ptr_return_by_reference1, self._ptr_return_by_reference2, self._ptr_last_err_code)
         err_code = self._ptr_last_err_code[0]
-        if err_code != OK:
+        if err_code != ked.OK:
             print_error(err_code)
             raise RuntimeError('Error trying to get feature matrix for descriptor {}'.format(record_descriptor))
         num_rows = self._ptr_return_by_reference1[0]
@@ -168,7 +201,7 @@ class KaldiFeatureReader(object):
         specifier = "ark:{}".format(path_to_archive)
         self._feature_reader = self._kaldi_lib.GetFeatureReader(specifier, self._ptr_last_err_code)
         err_code = self._ptr_last_err_code[0] 
-        if err_code != OK:
+        if err_code != ked.OK:
             print_error(err_code)
             raise RuntimeError('Error trying to open archive {}'.format(path_to_archive))
         self._open = True

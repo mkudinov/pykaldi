@@ -18,7 +18,8 @@
 #include "../gmm/am-diag-gmm.h"
 #include "../hmm/hmm-utils.h"
 #include "../gmm/decodable-am-diag-gmm.h"
-using namespace kaldi_python_common;
+using namespace kaldi_python_common_errors;
+using kaldi_python_common::Alignment;
 
 extern "C"
 {

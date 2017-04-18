@@ -1,4 +1,5 @@
 #include "kaldi-python-common.h"
+#include <cstdio>
 
 namespace kaldi_python_common
 {
@@ -24,17 +25,21 @@ Alignment *CreateAlignmentBuffer(int i_number_of_phones, int *o_err_code)
     return alignment_buffer;
 } 
 
-void DeleteAlignmentBufferr(Alignment *o_alignment_buffer)
+void DeleteAlignmentBuffer(Alignment *o_alignment_buffer)
 {
-    if(o_alignment_buffer->phones) 
+    if(o_alignment_buffer)
     {
-        delete[] o_alignment_buffer->phones;
-    }
-    if(o_alignment_buffer->num_repeats_per_phone) 
-    {
-        delete[] o_alignment_buffer->num_repeats_per_phone;
+        if(o_alignment_buffer->phones) 
+        {
+            delete[] o_alignment_buffer->phones;
+        }
+        if(o_alignment_buffer->num_repeats_per_phone) 
+        {
+            delete[] o_alignment_buffer->num_repeats_per_phone;
+        }
     }
     o_alignment_buffer->number_of_phones = 0;
+    delete o_alignment_buffer;
 }
 
 } //namespace kaldi_python_common

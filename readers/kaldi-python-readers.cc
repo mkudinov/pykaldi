@@ -43,7 +43,7 @@ Alignment *ReadAlignment(char *i_key, void *i_transition_model, void *i_alignmen
     std::vector<vector<int32> > split;
     std::vector<int32> alignment = alignment_reader->Value(key);
     kaldi::SplitToPhones(*transition_model, alignment, &split);
-    Alignment *result = CreateAlignmentBuffer(split.size(), o_err_code);
+    Alignment *result = kaldi_python_common::CreateAlignmentBuffer(split.size(), o_err_code);
     if(*o_err_code != OK)
         return 0;
     try 
@@ -246,5 +246,9 @@ void CopyIntegerVector(int *i_source, int i_size, void *o_destination, int *o_er
     }
 }
 
+void DeleteAlignment(Alignment *o_alignment_buffer)
+{
+    kaldi_python_common::DeleteAlignmentBuffer(o_alignment_buffer);
+}
 } //namespace python_data_readers
 } //extern "C"

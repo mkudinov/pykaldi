@@ -10,7 +10,7 @@
 
 extern "C"
 {
-namespace kaldi_python_common
+namespace kaldi_python_common_errors
 {
 enum
 {
@@ -25,7 +25,11 @@ enum
     WRONG_INPUT,
     KALDI_WRONG_CONFIGURATION
 };
+} //namespace kaldi_python_common_errors
 
+namespace kaldi_python_common
+{
+using namespace kaldi_python_common_errors;
 typedef struct 
 {
     int number_of_phones;
