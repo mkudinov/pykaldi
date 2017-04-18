@@ -3,7 +3,7 @@
 #include <iostream>
 extern "C"
 {
-namespace python_data_readers
+namespace kaldi_python_readers 
 {
 
 void *GetAlignmentReader(char *i_specifier, int *o_err_code)
@@ -250,5 +250,5 @@ void DeleteAlignment(Alignment *o_alignment_buffer)
 {
     kaldi_python_common::DeleteAlignmentBuffer(o_alignment_buffer);
 }
-} //namespace python_data_readers
+} //namespace kaldi_python_readers 
 } //extern "C"

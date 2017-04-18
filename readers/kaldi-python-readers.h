@@ -1,9 +1,9 @@
-// python/read-kaldi-data.h
+// python/kaldi-python-readers.h
 // SRR
 // Mikhail Kudinov 2017
 
-#ifndef PYTHON_READ_KALDI_DATA
-#define PYTHON_READ_KALDI_DATA
+#ifndef KALDI_PYTHON_READERS
+#define KALDI_PYTHON_READERS
 
 #include "common/kaldi-python-common.h"
 #include "../base/kaldi-common.h"
@@ -17,7 +17,7 @@ using kaldi_python_common::Alignment;
 using namespace kaldi_python_common_errors;
 extern "C"
 {
-namespace python_data_readers
+namespace kaldi_python_readers 
 {
 /* AlignmentReader */
 void *GetAlignmentReader(char *i_specifier
@@ -70,6 +70,6 @@ void CopyIntegerVector(int *i_source
                      , int *o_err_code);
 //from common.h
 void DeleteAlignment(Alignment *o_alignment_buffer);
-} //namespace python_data_readers
+} //namespace kaldi_python_readers
 } //extern "C"
 #endif
