@@ -238,7 +238,7 @@ class ReaderUtilities(object):
     @staticmethod
     def read_acoustic_model(path_to_model):
         ptr_last_err_code = ffi.new("int *")
-        model_handler = kaldi_lib.GetAcousticModel(path_to_transition_model, ptr_last_err_code)
+        model_handler = kaldi_lib.GetAcousticModel(path_to_model, ptr_last_err_code)
         err_code = ptr_last_err_code[0]
         if err_code != ked.OK:
             return None
@@ -288,3 +288,4 @@ if __name__ == '__main__':
     feature_matrix_reader.open_archive(path_to_feature_archive)
     feature_matrix = feature_matrix_reader.get_feature_matrix("TRAIN-FCT002-002B0181")
     print feature_matrix.numpy_array()
+    acoustic_model = ReaderUtilities.read_acoustic_model(PATH_TO_TRANSITION_MODEL)

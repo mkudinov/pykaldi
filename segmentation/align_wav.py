@@ -21,7 +21,7 @@ KALDI_PATH = '/home/mkudinov/KALDI/kaldi_new/kaldi/'
 RUSPEECH_EXP_PATH = 'egs/ruspeech/s1/'
 FEATURE_PATH = 'mfcc/raw_mfcc_train.1.ark'
 LIB_PATH = 'libpython-kaldi-segmentation.so'
-PATH_TO_TRANSITION_MODEL = KALDI_PATH + RUSPEECH_EXP_PATH + 'exp/tri1/final.mdl'
+PATH_TO_MODEL = KALDI_PATH + RUSPEECH_EXP_PATH + 'exp/tri1/final.mdl'
 PATH_TO_PHONES_TABLE = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/phones.txt'
 PATH_TO_TRIPHONE_MODEL = KALDI_PATH + RUSPEECH_EXP_PATH + 'exp/tri1/tree'
 PATH_TO_DISAMBIGUATION_SYMBOLS = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/phones/disambig.int'
@@ -137,6 +137,23 @@ class TransitionModel(object):
         return self._handler
 
 
+class AcousticModel(object):
+    def __init__(self, model_handler=None, filename=None):
+        if model_handler is not None:
+            self._handler = model_handler
+        elif filename is not None:
+            self._handler = kaldi_reader.read_acoustic_model(filename)
+        else:
+            raise RuntimeError("Constructor arguments are missing")
+
+    def __del__(self):
+        kaldi_reader.delete_acoustic_model(self._handler)
+
+    @property
+    def handler(self):
+        return self._handler
+
+
 class PhraseMatcher(object):
     def __init__(self, text_fst_compiler, text_codes):
         self._kaldi_lib = kaldi_lib
@@ -244,11 +261,12 @@ initialize_cffi()
 if __name__ == '__main__':
     context_tree = ContextTree(filename=PATH_TO_TRIPHONE_MODEL)
     disambiguation_symbols = IntegerVector(filename=PATH_TO_DISAMBIGUATION_SYMBOLS) 
-    transition_model = TransitionModel(filename=PATH_TO_TRANSITION_MODEL)
+    transition_model = TransitionModel(filename=PATH_TO_MODEL)
+    acoustic_model = AcousticModel(filename=PATH_TO_MODEL)
     text_fst_compiler = TextFstCompiler(PATH_TO_LEXICAL_FST, context_tree, disambiguation_symbols, transition_model)
     code_to_char, char_to_code = load_phones_table(PATH_TO_PHONES_TABLE)
     word_to_code = load_word_table(PATH_TO_WORD_TABLE)
-    aligner = WavAligner(text_fst_compiler, transition_model, context_tree, char_to_code)
+    aligner = WavAligner(text_fst_compiler, transition_model, acoustic_model, char_to_code)
     transcriber = Transcriber(word_to_code, UNK_CODE, code_to_char, char_to_code, encoding='cp1251')
     aligner.add_phrase(TEST_PHRASE, transcriber.transcribe(TEST_PHRASE))
     path_to_feature_archive = KALDI_PATH + RUSPEECH_EXP_PATH + FEATURE_PATH
