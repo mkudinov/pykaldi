@@ -29,6 +29,8 @@ PATH_TO_LEXICAL_FST = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/L.fst'
 TEST_PHRASE_CODE = 'TRAIN-FCT002-002B0181'
 TEST_PHRASE = u'уха обычно готовится из пресноводных рыб'
 PATH_TO_PHONES_TABLE = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/phones.txt'
+PATH_TO_WORD_TABLE = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/words.txt'
+UNK_CODE = '<UNK>'
 
 def initialize_cffi():
     src = """
@@ -148,6 +150,10 @@ class PhraseMatcher(object):
             raise RuntimeError("Error creating aligner")
 
     @property
+    def handler(self):
+        return self._aligner
+
+    @property
     def text(self):
         return self._text
 
@@ -185,7 +191,7 @@ class WavAligner(object):
         self._phrases[text] = PhraseMatcher(self._fst_compiler, transcription)
 
     def align(self, mfcc_features, text, acoustic_scale=1.0, transition_scale=1.0, self_loop_scale=1.0, beam=10, retry_beam=40):
-        alignment = self._kaldi_lib.Align(mfcc_features.handler, self._transition_model.handler, self._acoustic_model, self._phrases[text], acoustic_scale, transition_scale, self_loop_scale, beam, retry_beam, False, self._ptr_last_err_code)
+        alignment = self._kaldi_lib.Align(mfcc_features.handler, self._transition_model.handler, self._acoustic_model.handler, self._phrases[text].handler, acoustic_scale, transition_scale, self_loop_scale, beam, retry_beam, False, self._ptr_last_err_code)
         err_code = self._ptr_last_err_code[0]
         if err_code != ked.OK:
             print_error(err_code)
@@ -200,16 +206,16 @@ class WavAligner(object):
 class Transcriber(object):
     def __init__(self, word_table, unknown_word_code, phone_table, inv_phone_table, encoding='default'):
         self._word_table = word_table
-        assert(self._unk_code in self._word_table)
+        assert(unknown_word_code in self._word_table)
         self._unk_code = self._word_table[unknown_word_code]
         self._code_to_char = phone_table
         self._char_to_int = inv_phone_table
         self._encoding = encoding
 
-    def transcribe(phrase):
+    def transcribe(self, phrase):
         if self._encoding != 'default':
-            phrase = phrase.encode(self.encoding)
-        return [self._word_table[word] if word in self._word_table else self.unk_code for word in phrase.split(' ') ]
+            phrase = phrase.encode(self._encoding)
+        return [self._word_table[word] if word in self._word_table else self._unk_code for word in phrase.split(' ') ]
 
 
 def load_phones_table(path_to_phones_table):
@@ -224,12 +230,12 @@ def load_phones_table(path_to_phones_table):
     return phone_table, inv_phone_table
 
 
-def load_words_table(path_to_word_table):
+def load_word_table(path_to_word_table):
     word_table = {}
     for line in open(path_to_word_table, 'r'):
         word_code = line.split(' ')
         word = word_code[0]
-        code = word_code[1]
+        code = int(word_code[1])
         word_table[word] = code
     return word_table
 
@@ -243,9 +249,10 @@ if __name__ == '__main__':
     code_to_char, char_to_code = load_phones_table(PATH_TO_PHONES_TABLE)
     word_to_code = load_word_table(PATH_TO_WORD_TABLE)
     aligner = WavAligner(text_fst_compiler, transition_model, context_tree, char_to_code)
-    transcriber = Transcriber(word_to_code, UNK_CODE, code_to_char, char_to_code)
+    transcriber = Transcriber(word_to_code, UNK_CODE, code_to_char, char_to_code, encoding='cp1251')
     aligner.add_phrase(TEST_PHRASE, transcriber.transcribe(TEST_PHRASE))
     path_to_feature_archive = KALDI_PATH + RUSPEECH_EXP_PATH + FEATURE_PATH
+    feature_matrix_reader = KaldiFeatureReader()
     feature_matrix_reader.open_archive(path_to_feature_archive)
-    feature_matrix = feature_matrix_reader.get_feature_matrix(TEST_FEATURES)
-    aligner.align(features, text)
+    feature_matrix = feature_matrix_reader.get_feature_matrix(TEST_PHRASE_CODE)
+    aligner.align(feature_matrix, TEST_PHRASE)

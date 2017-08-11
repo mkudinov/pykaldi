@@ -156,8 +156,11 @@ class KaldiMatrixProxy(object):
         self._ptr_to_matrix = ptr_to_matrix
         self.shape = shape
         self.valid = True
-        print shape
         self._ptr_last_err_code = self._ffi.new("int *")
+
+    @property
+    def handler(self):
+        return self._ptr_to_matrix
 
     def numpy_array(self):
         if not self.valid:
