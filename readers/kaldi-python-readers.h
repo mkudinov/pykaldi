@@ -11,6 +11,7 @@
 #include "../hmm/transition-model.h"
 #include "../matrix/kaldi-matrix.h"
 #include "../gmm/am-diag-gmm.h"
+#include "../feat/feature-functions.h"
 
 
 using kaldi_python_common::Alignment;
@@ -58,6 +59,14 @@ const void *ReadFeatureMatrix(char *i_key
 void CopyFeatureMatrix(void *i_source
                      , void *o_destination
                      , int *o_err_code);
+
+void AddDeltaFeatures(void *i_feature_matrix
+                    , int i_n_rows
+                    , int i_n_columns
+                    , void *o_delta_feature_matrix
+                    , int *o_n_rows
+                    , int *o_n_columns
+                    , int *o_err_code);
 
 /* IntegerVector*/
 int *ReadIntegerVector(char *i_specifier

@@ -180,6 +180,54 @@ const void* ReadFeatureMatrix(char* i_key, void *i_feature_reader, int* o_n_rows
     return &features;
 }
 
+void AddDeltaFeatures(void *i_feature_matrix
+                    , int i_n_rows
+                    , int i_n_columns
+                    , void *o_delta_feature_matrix
+                    , int *o_n_rows,
+                    , int *o_n_columns
+                    , int *o_err_code)
+{
+    try
+    {
+        *o_err_code = OK;
+        kaldi::DelatFeaturesOptions opts;
+        int truncate = 0;
+        const kaldi::Matrix<float>* source = static_cast<const kaldi::Matrix<float>*>(i_feature_matrix);
+        int nRows = source->NumRows();
+        int nColumns = source->NumCols();
+        for()
+        {
+            if (source->NumRows() == 0) 
+            {
+                KALDI_WARN << "Empty feature matrix for key " << key; 
+            }
+        }
+        Matrix<float> new_feats;
+        if(truncate > 0)
+        {
+            if(truncate > feats.NumCols())
+            {
+                KALDI_ERR << "Cannot truncate features as dimension " << feats.NumCols()
+                    << " is smaller than truncation dimension.";
+            }
+            SubMatrix<BaseFloat> feats_sub(feats, 0, feats.NumRows(), 0, truncate);
+            ComputeDeltas(opts, feats_sub, &new_feats);
+        }    
+        else
+        {
+            ComputeDeltas(opts, feats, &new_feats);
+            *o_delta_feature_matrix = &
+        }
+        
+    }
+    catch(const std::exception &e)
+    {
+        *o_err_code = INTERNAL_KALDI_ERROR;
+        std::cerr << e.what();
+    }
+}
+
 void CopyFeatureMatrix(void *i_source, void *o_destination, int *o_err_code)
 {
     *o_err_code = OK;
