@@ -64,32 +64,6 @@ Alignment *ReadAlignment(char *i_key, void *i_transition_model, void *i_alignmen
     return result;
 }
 
-void *GetContextTree(char *i_specifier, int *o_err_code)
-{
-    *o_err_code = OK;
-    kaldi::ContextDependency* ctx_dep; // the tree.
-    try
-    {
-        ctx_dep = new kaldi::ContextDependency; 
-        kaldi::ReadKaldiObject(i_specifier, ctx_dep);
-    }
-    catch(...)
-    {
-        *o_err_code = ERROR_OPENING;
-        return 0;
-    }
-    return ctx_dep;
-}
-
-void DeleteContextTree(void *o_context_tree)
-{
-    if(o_context_tree)
-    {
-        delete static_cast<kaldi::ContextDependency*>(o_context_tree);
-        o_context_tree = 0;
-    }
-}
-
 void *GetFeatureReader(char *i_specifier, int *o_err_code)
 {
     *o_err_code = OK;
