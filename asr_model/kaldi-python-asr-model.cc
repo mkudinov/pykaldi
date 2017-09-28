@@ -152,7 +152,6 @@ int GetNumberOfGauss(void *i_acoustic_model, int *o_err_code)
     {
         *o_err_code = CORRUPTED_POINTER;
     }
-    std::cout << static_cast<kaldi::AmDiagGmm*>(i_acoustic_model)->NumGauss() << std::endl;
     return number_of_gaussian;
 }
 
