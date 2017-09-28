@@ -27,4 +27,4 @@ depend:
 .PHONY: clean 
 
 clean:
-	rm -f *.o .depend.mk
+	rm -f *.o *.so .depend.mk
