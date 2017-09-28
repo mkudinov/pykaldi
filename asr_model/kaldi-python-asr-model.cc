@@ -175,8 +175,9 @@ int GetNumberOfGaussInPdf(void *i_acoustic_model, int i_pdf_id, int *o_err_code)
     return number_of_gaussian;
 }
 
-void BoostSilence(void *i_transition_model, void *io_acoustic_model, int *i_silence_phones, int silence_phones_size, double i_boost)
+void BoostSilence(void *i_transition_model, void *io_acoustic_model, int *i_silence_phones, int silence_phones_size, double i_boost, int *o_err_code)
 {
+    *o_err_code = OK;
     std::vector<int> silence_phones(silence_phones_size);
     for(size_t i = 0; i < silence_phones_size; i++)
     {

@@ -52,7 +52,8 @@ void BoostSilence(void *i_transition_model
                 , void *io_acoustic_model
                 , int *i_silence_phones
                 , int silence_phones_size
-                , double i_boost);
+                , double i_boost
+                , int *o_err_code);
 } //namespace kaldi_python_asr_model
 } //extern "C"
 #endif

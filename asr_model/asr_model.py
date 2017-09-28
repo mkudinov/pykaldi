@@ -53,7 +53,8 @@ def initialize_cffi():
                         , void *io_acoustic_model
                         , int *i_silence_phones
                         , int silence_phones_size
-                        , double i_boost);
+                        , double i_boost
+                        , int *o_err_code);
     """
     global ffi
     global kaldi_lib
@@ -88,6 +89,18 @@ class ASR_model(object):
         err_code = ptr_last_err_code[0]
         if err_code != ked.OK:
             raise RuntimeError('Model reference crashed')
+
+    def boost_silence(self, silence_phones, boost_scale=1.0):
+        ptr_last_err_code = ffi.new("int *")
+        self.kaldi_lib.BoostSilence(self._ptr_transition_model,
+                                    self._ptr_acoustic_model,
+                                    ffi.new("int[]", silence_phones),
+                                    len(silence_phones),
+                                    boost_scale,
+                                    ptr_last_err_code)
+        err_code = ptr_last_err_code[0]
+        if err_code != ked.OK:
+            raise RuntimeError('Silence boost crashed')
 
     def __del__(self):
         self.kaldi_lib.DeleteTransitionModel(self._ptr_transition_model)
