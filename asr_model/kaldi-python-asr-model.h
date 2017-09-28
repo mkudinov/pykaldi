@@ -36,7 +36,7 @@ int GetNumberOfPhones(void *i_transition_model
 void *GetAcousticModel(char *i_transition_model_filename
                       , int *o_err_code);
 
-void DeleteAcousticModel(void *o_amm_gmm);
+void DeleteAcousticModel(void *o_acoustic_model);
 
 int GetNumberOfPdfsAM(void *i_acoustic_model
                      , int *o_err_code);
@@ -47,6 +47,12 @@ int GetNumberOfGauss(void *i_acoustic_model
 int GetNumberOfGaussInPdf(void *i_acoustic_model
                          , int i_pdf_id
                          , int *o_err_code);
+
+void BoostSilence(void *i_transition_model
+                , void *io_acoustic_model
+                , int *i_silence_phones
+                , int silence_phones_size
+                , double i_boost);
 } //namespace kaldi_python_asr_model
 } //extern "C"
 #endif
