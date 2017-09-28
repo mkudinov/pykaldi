@@ -221,59 +221,31 @@ class KaldiFeatureReader(object):
         self._kaldi_matrices = []
 
 
-class ReaderUtilities(object):
-    @staticmethod
-    def read_transition_model(path_to_transition_model):
-        ptr_last_err_code = ffi.new("int *")
-        transition_model_handler = kaldi_lib.GetTransitionModel(path_to_transition_model, ptr_last_err_code)
-        err_code = ptr_last_err_code[0]
-        if err_code != ked.OK:
-            return None
-        return transition_model_handler
-    
-    @staticmethod
-    def delete_transition_model(transition_model_handler):
-        kaldi_lib.DeleteTransitionModel(transition_model_handler)
-    
-    @staticmethod
-    def read_acoustic_model(path_to_model):
-        ptr_last_err_code = ffi.new("int *")
-        model_handler = kaldi_lib.GetAcousticModel(path_to_model, ptr_last_err_code)
-        err_code = ptr_last_err_code[0]
-        if err_code != ked.OK:
-            return None
-        return model_handler
-    
-    @staticmethod
-    def delete_acoustic_model(model_handler):
-        kaldi_lib.DeleteAcousticModel(model_handler)
+class KaldiIntegerVector(object):
+    def __init__(self):
+        self._ptr_integer_vector = None
+        self._n_elements = 0
 
-    @staticmethod
-    def read_context_tree(path_to_tree_file):
-        ptr_last_err_code = ffi.new("int *")
-        ctx_handler = kaldi_lib.GetContextTree(path_to_tree_file, ptr_last_err_code)
-        err_code = ptr_last_err_code[0]
-        if err_code != ked.OK:
-            return None
-        return ctx_handler
-    
-    @staticmethod
-    def delete_context_tree(ctx_handler):
-        kaldi_lib.DeleteContextTree(ctx_handler)
-
-    @staticmethod
-    def read_integer_vector(read_specifier):
+    def load(self, read_specifier=None):
         ptr_last_err_code = ffi.new("int *")
         ptr_n_elements=ffi.new("int *")
-        vector_handler = kaldi_lib.ReadIntegerVector(read_specifier, ptr_n_elements, ptr_last_err_code)
+        self._ptr_integer_vector = kaldi_lib.ReadIntegerVector(read_specifier, self.ptr_n_elements, ptr_last_err_code)
         err_code = ptr_last_err_code[0]
         if err_code != ked.OK:
-            return None
-        return vector_handler, ptr_n_elements[0]
-    
-    @staticmethod
-    def delete_integer_vector(vector_handler):
-        kaldi_lib.DeleteIntegerVector(vector_handler)
+            raise RuntimeError('Error trying to load vector')
+        self._n_elements = ptr_n_elements[0]
+
+    def __del__(self):
+        if self._ptr_integer_vector is not None:
+            kaldi_lib.DeleteIntegerVector(self._ptr_integer_vector)
+
+    @property
+    def handler(self):
+        return self._ptr_integer_vector
+
+    @property
+    def n_elements(self):
+        return self._n_elements
 
 
 initialize_cffi()
