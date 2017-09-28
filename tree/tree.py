@@ -40,24 +40,28 @@ class ContextDependency(object):
         if path_to_tree_file is None:
             raise RuntimeError('Only reading from file is currently supported!')
         ptr_last_err_code = ffi.new("int *")
-        self._ptr_fst = self.kaldi_lib.GetContextDependency(path_to_tree_file, ptr_last_err_code)
+        self._ptr_tree = self.kaldi_lib.GetContextDependency(path_to_tree_file, ptr_last_err_code)
         err_code = ptr_last_err_code[0]
         if err_code != ked.OK:
             raise RuntimeError('Tree reading failed')
-        self.context_width = self.kaldi_lib.GetContextWidth(self._ptr_fst, ptr_last_err_code)
+        self.context_width = self.kaldi_lib.GetContextWidth(self._ptr_tree, ptr_last_err_code)
         err_code = ptr_last_err_code[0]
         if err_code != ked.OK:
             raise RuntimeError('Object reference crashed')
-        self.central_position = self.kaldi_lib.GetCentralPosition(self._ptr_fst, ptr_last_err_code)
+        self.central_position = self.kaldi_lib.GetCentralPosition(self._ptr_tree, ptr_last_err_code)
         err_code = ptr_last_err_code[0]
         if err_code != ked.OK:
             raise RuntimeError('Object reference crashed')
 
     def __del__(self):
-        self._ptr_fst = self.kaldi_lib.DeleteContextDependency(self._ptr_fst)
+        self.kaldi_lib.DeleteContextDependency(self._ptr_tree)
 
     def __str__(self):
         return "ContextDependency: width: %s; %s central position " % (self.context_width, self.central_position)
+
+    @property
+    def handle(self):
+        return self._ptr_tree
 
 
 initialize_cffi()

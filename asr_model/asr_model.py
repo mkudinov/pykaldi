@@ -90,6 +90,14 @@ class ASR_model(object):
     def __str__(self):
         return "Model: %s transitions; %s pdfs; %s gauss" % (self.n_transitions, self.n_pdfs, self.n_gauss)
 
+    @property
+    def acoustic_model_handle(self):
+        return self._ptr_acoustic_model
+
+    @property
+    def transition_model_handle(self):
+        return self._ptr_transition_model
+
 
 initialize_cffi()
 if __name__ == '__main__':

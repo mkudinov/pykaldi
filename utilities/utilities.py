@@ -229,7 +229,7 @@ class KaldiIntegerVector(object):
     def load(self, read_specifier=None):
         ptr_last_err_code = ffi.new("int *")
         ptr_n_elements=ffi.new("int *")
-        self._ptr_integer_vector = kaldi_lib.ReadIntegerVector(read_specifier, self.ptr_n_elements, ptr_last_err_code)
+        self._ptr_integer_vector = kaldi_lib.ReadIntegerVector(read_specifier, ptr_n_elements, ptr_last_err_code)
         err_code = ptr_last_err_code[0]
         if err_code != ked.OK:
             raise RuntimeError('Error trying to load vector')
@@ -240,11 +240,11 @@ class KaldiIntegerVector(object):
             kaldi_lib.DeleteIntegerVector(self._ptr_integer_vector)
 
     @property
-    def handler(self):
+    def handle(self):
         return self._ptr_integer_vector
 
     @property
-    def n_elements(self):
+    def __len__(self):
         return self._n_elements
 
 

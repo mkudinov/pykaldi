@@ -34,30 +34,35 @@ def initialize_cffi():
         exit(1)
 
 
-class ContextDependency(object):
-    def __init__(self, path_to_tree_file):
+class TrainingGraphCompiler(object):
+    def __init__(self, asr_model,
+                       context_dependency,
+                       lexical_fst,
+                       disambiguation_symbols,
+                       transition_scale=1.0,
+                       self_loop_scale=1.0,
+                       reorder=True):
         self.kaldi_lib = kaldi_lib
-        if path_to_tree_file is None:
-            raise RuntimeError('Only reading from file is currently supported!')
         ptr_last_err_code = ffi.new("int *")
-        self._ptr_fst = self.kaldi_lib.GetContextDependency(path_to_tree_file, ptr_last_err_code)
+        self._ptr_graph_compiler = self.kaldi_lib.GetTrainingGraphCompiler(asr_model.transition_model_handle,
+                                                context_dependency.handle,
+                                                lexical_fst.handle,
+                                                disambiguation_symbols.handle,
+                                                len(disambiguation_symbols),
+                                                transition_scale,
+                                                self_loop_scale,
+                                                reorder)
         err_code = ptr_last_err_code[0]
         if err_code != ked.OK:
-            raise RuntimeError('Tree reading failed')
-        self.context_width = self.kaldi_lib.GetContextWidth(self._ptr_fst, ptr_last_err_code)
-        err_code = ptr_last_err_code[0]
-        if err_code != ked.OK:
-            raise RuntimeError('Object reference crashed')
-        self.central_position = self.kaldi_lib.GetCentralPosition(self._ptr_fst, ptr_last_err_code)
-        err_code = ptr_last_err_code[0]
-        if err_code != ked.OK:
-            raise RuntimeError('Object reference crashed')
+            raise RuntimeError('Graph compiler creation failed')
+        lexical_fst._ptr_fst = 0
 
     def __del__(self):
-        self._ptr_fst = self.kaldi_lib.DeleteContextDependency(self._ptr_fst)
+        self._ptr_fst = self.kaldi_lib.DeleteTrainingGraphCompiler(self._ptr_graph_compiler)
 
-    def __str__(self):
-        return "ContextDependency: width: %s; %s central position " % (self.context_width, self.central_position)
+    @property
+    def handle(self):
+        return self._ptr_graph_compiler
 
 
 initialize_cffi()

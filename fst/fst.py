@@ -49,10 +49,14 @@ class KaldiFST(object):
             raise RuntimeError('FST reference crashed')
 
     def __del__(self):
-        self._ptr_fst = self.kaldi_lib.DeleteFst(self._ptr_fst)
+        self.kaldi_lib.DeleteFst(self._ptr_fst)
 
     def __str__(self):
         return "FST: %s arcs" % (self.n_arcs)
+
+    @property
+    def handle(self):
+        return self._ptr_fst
 
 
 initialize_cffi()
