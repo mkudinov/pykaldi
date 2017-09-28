@@ -6,7 +6,7 @@ OBJFILES = kaldi-python-tree.o
 
 LIBNAME = python-kaldi-tree
 
-ADDLIBS = ../../base/kaldi-base.a ../../util/kaldi-util.a ../../fstext/kaldi-fstext.a ../common/python-kaldi-common.o
+ADDLIBS = ../../base/kaldi-base.a ../../util/kaldi-util.a ../../fstext/kaldi-fstext.a ../../tree/kaldi-tree.a ../common/python-kaldi-common.o
 
 LIBFILE = lib$(LIBNAME).so
 
