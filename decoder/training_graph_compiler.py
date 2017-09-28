@@ -9,7 +9,10 @@ if not os.path.isfile('common/constants.py'):
     exit(1)
 
 from common.constants import KALDI_ERR_CODES as ked
-from fst.fst import KaldiFst
+from asr_model.asr_model import ASR_model
+from fst.fst import KaldiFST
+from tree.tree import ContextDependency
+from utilities.utilities import KaldiIntegerVector
 from common.constants import print_error as print_error
 
 ffi = None
@@ -59,18 +62,20 @@ class TrainingGraphCompiler(object):
                        reorder=True):
         self.kaldi_lib = kaldi_lib
         ptr_last_err_code = ffi.new("int *")
-        self._ptr_graph_compiler = self.kaldi_lib.GetTrainingGraphCompiler(asr_model.transition_model_handle,
+        self._ptr_graph_compiler = self.kaldi_lib.GetTrainingGraphCompiler(
+                                                asr_model.transition_model_handle,
                                                 context_dependency.handle,
                                                 lexical_fst.handle,
                                                 disambiguation_symbols.handle,
                                                 len(disambiguation_symbols),
                                                 transition_scale,
                                                 self_loop_scale,
-                                                reorder)
+                                                reorder,
+                                                ptr_last_err_code)
         err_code = ptr_last_err_code[0]
         if err_code != ked.OK:
             raise RuntimeError('Graph compiler creation failed')
-        lexical_fst._ptr_fst = 0
+        lexical_fst._ptr_fst = ffi.NULL
 
     def compile_phrase_graph(self, transcript):
         ptr_last_err_code = ffi.new("int *")
@@ -82,9 +87,8 @@ class TrainingGraphCompiler(object):
             raise RuntimeError('Graph compilation failed')
         return decoder_fst
 
-
     def __del__(self):
-        self._ptr_fst = self.kaldi_lib.DeleteTrainingGraphCompiler(self._ptr_graph_compiler)
+        self.kaldi_lib.DeleteTrainingGraphCompiler(self._ptr_graph_compiler)
 
     @property
     def handle(self):
@@ -92,3 +96,21 @@ class TrainingGraphCompiler(object):
 
 
 initialize_cffi()
+if __name__ == '__main__':
+    KALDI_PATH = '/home/mkudinov/KALDI/kaldi_new/kaldi/'
+    RUSPEECH_EXP_PATH = 'egs/ruspeech/s1/'
+    PATH_TO_LEXICAL_FST = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/L.fst'
+    fst = KaldiFST(PATH_TO_LEXICAL_FST)
+    print fst
+    PATH_TO_MODEL = KALDI_PATH + RUSPEECH_EXP_PATH + 'exp/tri1/final.mdl'
+    asr_model = ASR_model(PATH_TO_MODEL)
+    print asr_model
+    PATH_TO_CONTEXT_TREE = KALDI_PATH + RUSPEECH_EXP_PATH + 'exp/tri1/tree'
+    context_dependency = ContextDependency(PATH_TO_CONTEXT_TREE)
+    print context_dependency
+    PATH_TO_DISAMBIGUATION_SYMBOLS = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/phones/disambig.int'
+    disambiguation_symbols = KaldiIntegerVector()
+    disambiguation_symbols.load(PATH_TO_DISAMBIGUATION_SYMBOLS)
+    print "Disamb.symbols: ", len(disambiguation_symbols)
+    graph_compiler = TrainingGraphCompiler(asr_model, context_dependency, fst, disambiguation_symbols)
+    print "Graph compile Kaldi handle ", graph_compiler.handle
