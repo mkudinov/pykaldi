@@ -60,13 +60,13 @@ def initialize_cffi():
         exit(1)
 
 class ASR_model(object):
-    def __init__(self, path_to_transition_model=None):
+    def __init__(self, path_to_model=None):
         self.kaldi_lib = kaldi_lib
-        if path_to_transition_model is None:
+        if path_to_model is None:
             raise RuntimeError('Only reading from file is currently supported!')
         ptr_last_err_code = ffi.new("int *")
-        self._ptr_transition_model = self.kaldi_lib.GetTransitionModel(path_to_transition_model, ptr_last_err_code)
-        self._ptr_acoustic_model = self.kaldi_lib.GetAcousticModel(path_to_transition_model, ptr_last_err_code)
+        self._ptr_transition_model = self.kaldi_lib.GetTransitionModel(path_to_model, ptr_last_err_code)
+        self._ptr_acoustic_model = self.kaldi_lib.GetAcousticModel(path_to_model, ptr_last_err_code)
         err_code = ptr_last_err_code[0]
         if err_code != ked.OK:
             raise RuntimeError('Transition model reading failed')
