@@ -18,7 +18,7 @@ KALDI_PATH = '/home/mkudinov/KALDI/kaldi_new/kaldi/'
 RUSPEECH_EXP_PATH = 'egs/ruspeech/s1/'
 ALIGNS_PATH = 'exp/tri1/ali.1.gz'
 FEATURE_PATH = 'mfcc/raw_mfcc_train.1.ark'
-LIB_PATH = 'libpython-kaldi-readers.so'
+LIB_PATH = 'libpython-kaldi-utilities.so'
 PATH_TO_TRANSITION_MODEL = KALDI_PATH + RUSPEECH_EXP_PATH + 'exp/tri1/final.mdl'
 PATH_TO_PHONES_TABLE = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/phones.txt'
 

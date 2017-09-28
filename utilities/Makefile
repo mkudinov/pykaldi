@@ -2,9 +2,9 @@ all:
 
 include ../../kaldi.mk
 CXXFLAGS += -I$(dir $(KALDILIBDIR))
-OBJFILES = kaldi-python-readers.o
+OBJFILES = kaldi-python-utilities.o
 
-LIBNAME = python-kaldi-readers
+LIBNAME = python-kaldi-utilities
 
 ADDLIBS = ../../base/kaldi-base.a ../../util/kaldi-util.a ../../matrix/kaldi-matrix.a ../../hmm/kaldi-hmm.a ../../fstext/kaldi-fstext.a ../../tree/kaldi-tree.a ../../decoder/kaldi-decoder.a ../../matrix/kaldi-matrix.o ../../gmm/kaldi-gmm.a ../common/python-kaldi-common.o
 
