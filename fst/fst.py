@@ -34,15 +34,19 @@ def initialize_cffi():
 
 
 class KaldiFST(object):
-    def __init__(self, path_to_fst_file):
+    def __init__(self, path_to_fst_file=None, fst_handle=None):
         self.kaldi_lib = kaldi_lib
-        if path_to_fst_file is None:
-            raise RuntimeError('Only reading from file is currently supported!')
         ptr_last_err_code = ffi.new("int *")
-        self._ptr_fst = self.kaldi_lib.GetFst(path_to_fst_file, ptr_last_err_code)
-        err_code = ptr_last_err_code[0]
-        if err_code != ked.OK:
-            raise RuntimeError('FST reading failed')
+        self._ptr_fst = None
+        if path_to_fst_file is not None:
+            self._ptr_fst = self.kaldi_lib.GetFst(path_to_fst_file, ptr_last_err_code)
+            err_code = ptr_last_err_code[0]
+            if err_code != ked.OK:
+                raise RuntimeError('FST reading failed')
+        elif fst_handle is not None:
+            self._ptr_fst = fst_handle
+        else:
+            raise RuntimeError('Only reading from file and initialization from existing pointer is currently supported!')
         self.n_arcs = self.kaldi_lib.GetNumberOfArcs(self._ptr_fst, ptr_last_err_code)
         err_code = ptr_last_err_code[0]
         if err_code != ked.OK:
