@@ -1,5 +1,5 @@
 PYTHONKALDILIBDIR=lib
-SUBDIRS = common asr_model fst readers segmentation
+SUBDIRS = common asr_model fst tree readers segmentation
 CLEANSUBDIRS=$(addsuffix .clean,$(SUBDIRS))
 COPYSUBDIRS=$(addsuffix .copy,$(SUBDIRS))
 
