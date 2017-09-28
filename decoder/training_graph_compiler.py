@@ -9,19 +9,34 @@ if not os.path.isfile('common/constants.py'):
     exit(1)
 
 from common.constants import KALDI_ERR_CODES as ked
+from fst.fst import KaldiFst
 from common.constants import print_error as print_error
 
 ffi = None
 kaldi_lib = None
 
-LIB_PATH = 'libpython-kaldi-tree.so'
+LIB_PATH = 'libpython-kaldi-decoder.so'
 
 def initialize_cffi():
     src = """
-        void *GetContextDependency(char *i_path_to_tree, int *o_err_code);
-        int GetContextWidth(void *i_tree, int *o_err_code);
-        int GetCentralPosition(void *i_tree, int *o_err_code);
-        void DeleteContextDependency(void *o_tree);
+    void *GetTrainingGraphCompiler( void   *i_transition_model
+                                  , void   *i_context_dependency
+                                  , void   *io_lexical_fst
+                                  , int    *i_disambiguation_symbols
+                                  , int     i_disambiguation_symbols_length
+                                  , double  i_option_transition_scale
+                                  , double  i_option_self_loop_scale
+                                  , bool    i_option_reorder
+                                  , int    *o_err_code
+                                  );
+
+    void *CompilePhraseGraphFromText( void *i_graph_compiler
+                                    , int  *i_transcript
+                                    , int   i_transcript_length
+                                    , int  *o_err_code
+                                    );
+
+    void DeleteTrainingGraphCompiler(void *o_graph_compiler);
     """
     global ffi
     global kaldi_lib
@@ -57,6 +72,17 @@ class TrainingGraphCompiler(object):
             raise RuntimeError('Graph compiler creation failed')
         lexical_fst._ptr_fst = 0
 
+    def compile_phrase_graph(self, transcript):
+        ptr_last_err_code = ffi.new("int *")
+        decoder_fst_ptr = kaldi_lib.CompilePhraseGraphFromText(self._ptr_graph_compiler, transcript.handle, len(transcript),
+                                                             ptr_last_err_code)
+        decoder_fst = KaldiFST(fst_handle=decoder_fst_ptr)
+        err_code = ptr_last_err_code[0]
+        if err_code != ked.OK:
+            raise RuntimeError('Graph compilation failed')
+        return decoder_fst
+
+
     def __del__(self):
         self._ptr_fst = self.kaldi_lib.DeleteTrainingGraphCompiler(self._ptr_graph_compiler)
 
@@ -66,9 +92,3 @@ class TrainingGraphCompiler(object):
 
 
 initialize_cffi()
-if __name__ == '__main__':
-    KALDI_PATH = '/home/mkudinov/KALDI/kaldi_new/kaldi/'
-    RUSPEECH_EXP_PATH = 'egs/ruspeech/s1/'
-    PATH_TO_CONTEXT_TREE = KALDI_PATH + RUSPEECH_EXP_PATH + 'exp/tri1/tree'
-    context_dependency = ContextDependency(PATH_TO_CONTEXT_TREE)
-    print context_dependency
