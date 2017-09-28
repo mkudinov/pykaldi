@@ -1,5 +1,5 @@
 PYTHONKALDILIBDIR=lib
-SUBDIRS = common asr_model fst tree utilities segmentation
+SUBDIRS = common asr_model fst tree utilities decoder segmentation
 CLEANSUBDIRS=$(addsuffix .clean,$(SUBDIRS))
 COPYSUBDIRS=$(addsuffix .copy,$(SUBDIRS))
 
