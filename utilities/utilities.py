@@ -259,4 +259,3 @@ if __name__ == '__main__':
     feature_matrix_reader.open_archive(path_to_feature_archive)
     feature_matrix = feature_matrix_reader.get_feature_matrix("TRAIN-FCT002-002B0181")
     print feature_matrix.numpy_array()
-    acoustic_model = ReaderUtilities.read_acoustic_model(PATH_TO_TRANSITION_MODEL)
