@@ -243,7 +243,6 @@ class KaldiIntegerVector(object):
     def handle(self):
         return self._ptr_integer_vector
 
-    @property
     def __len__(self):
         return self._n_elements
 
