@@ -6,7 +6,7 @@ OBJFILES = kaldi-python-asr-model.o
 
 LIBNAME = python-kaldi-asr-model
 
-ADDLIBS = ../../base/kaldi-base.a ../../util/kaldi-util.a ../../matrix/kaldi-matrix.a ../../hmm/kaldi-hmm.a ../../fstext/kaldi-fstext.a ../../matrix/kaldi-matrix.o ../../gmm/kaldi-gmm.a ../common/python-kaldi-common.o
+ADDLIBS = ../../base/kaldi-base.a ../../util/kaldi-util.a ../../matrix/kaldi-matrix.a ../../hmm/kaldi-hmm.a  ../../gmm/kaldi-gmm.a ../common/python-kaldi-common.o
 
 LIBFILE = lib$(LIBNAME).so
 
