@@ -6,7 +6,7 @@ OBJFILES = kaldi-python-transform.o
 
 LIBNAME = python-kaldi-transform
 
-ADDLIBS = ../../base/kaldi-base.a ../../util/kaldi-util.a ../../matrix/kaldi-matrix.a ../../feat/kaldi-feat.a ../common/python-kaldi-common.o
+ADDLIBS = ../../base/kaldi-base.a ../../util/kaldi-util.a ../../matrix/kaldi-matrix.a ../../transform/kaldi-transform.a ../common/python-kaldi-common.o
 
 LIBFILE = lib$(LIBNAME).so
 
