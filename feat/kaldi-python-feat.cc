@@ -36,10 +36,19 @@ const void* ReadFeatureMatrix(char* i_key, void *i_feature_reader, int* o_n_rows
         *o_err_code = NO_KEY;
         return 0;
     }
-    const kaldi::Matrix<float> &features = feature_reader->Value(key);
-    *o_n_rows = features.NumRows();
-    *o_n_columns = features.NumCols();
-    return &features;
+    const kaldi::Matrix<float>* features = new kaldi::Matrix<float>(feature_reader->Value(key));
+    *o_n_rows = features->NumRows();
+    *o_n_columns = features->NumCols();
+    return features;
+}
+
+void DeleteFeatureMatrix(void *o_feature_matrix)
+{
+    if(o_feature_matrix)
+    {
+        delete static_cast<kaldi::Matrix<float>*>(o_feature_matrix);
+        o_feature_matrix = 0;
+    }
 }
 
 void CopyFeatureMatrix(void *i_source, void *o_destination, int *o_err_code)

@@ -24,6 +24,8 @@ def initialize_cffi():
 
     const void* ReadFeatureMatrix(char* i_key, void *i_feature_reader, int* o_n_rows, int* o_n_columns, int *o_err_code);
 
+    void DeleteFeatureMatrix(void *o_feature_matrix);
+
     void CopyFeatureMatrix(void *i_source, void *o_destination, int *o_err_code);
 
     void *GetMatrixOfDeltaFeatures(void *i_feature_matrix, int i_order, int i_window, int *o_err_code);
@@ -38,7 +40,7 @@ def initialize_cffi():
         print "Library {} is not found in the LD_LIBRARY_PATH. Please, add ./lib to your LD_LIBRARY_PATH".format(LIB_PATH)
         exit(1)
 
-class KaldiMatrixProxy(object):
+class KaldiMatrix(object):
     def __init__(self, ptr_to_matrix, shape):
         self._kaldi_lib = kaldi_lib
         self._ffi = ffi
@@ -47,8 +49,11 @@ class KaldiMatrixProxy(object):
         self.valid = True
         self._ptr_last_err_code = self._ffi.new("int *")
 
+    def __del__(self):
+        self._kaldi_lib.DeleteFeatureMatrix(self._ptr_to_matrix)
+
     @property
-    def handler(self):
+    def handle(self):
         return self._ptr_to_matrix
 
     def numpy_array(self):
@@ -81,7 +86,7 @@ class KaldiFeatureReader(object):
             raise RuntimeError('Error trying to get feature matrix for descriptor {}'.format(record_descriptor))
         num_rows = self._ptr_return_by_reference1[0]
         num_columns = self._ptr_return_by_reference2[0]
-        feature_matrix = KaldiMatrixProxy(result_ptr, [num_rows, num_columns])
+        feature_matrix = KaldiMatrix(result_ptr, [num_rows, num_columns])
         self._kaldi_matrices.append(feature_matrix)
         return feature_matrix
 
@@ -100,14 +105,8 @@ class KaldiFeatureReader(object):
 
     def close_archive(self):
         if self._open:
-            self._destroy_all_matrices()
             self._kaldi_lib.DeleteFeatureReader(self._feature_reader)
         self._open = False
-
-    def _destroy_all_matrices(self):
-        for matrix in self._kaldi_matrices:
-            matrix.valid = False
-        self._kaldi_matrices = []
 
 
 initialize_cffi()
