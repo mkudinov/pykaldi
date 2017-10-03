@@ -75,7 +75,7 @@ void *GetMatrixOfDeltaFeatures(void *i_feature_matrix
                                , int i_window
                                , int* o_n_rows
                                , int* o_n_columns
-                               , int *o_err_code);
+                               , int *o_err_code)
 {
     *o_err_code = OK;
     try
