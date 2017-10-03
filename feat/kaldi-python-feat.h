@@ -1,4 +1,3 @@
-// python/kaldi-python-readers.h
 // SRR
 // Mikhail Kudinov 2017
 

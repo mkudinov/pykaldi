@@ -1,4 +1,3 @@
-// python/kaldi-python-common.h
 // SRR
 // Mikhail Kudinov 2017
 

@@ -1,4 +1,3 @@
-// python/kaldi-python-fst.h
 // SRR
 // Mikhail Kudinov 2017
 
