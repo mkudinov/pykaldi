@@ -22,13 +22,22 @@ def initialize_cffi():
 
     void DeleteFeatureReader(void *o_feature_reader);
 
-    const void* ReadFeatureMatrix(char* i_key, void *i_feature_reader, int* o_n_rows, int* o_n_columns, int *o_err_code);
+    const void* ReadFeatureMatrix(char* i_key
+                                 , void *i_feature_reader
+                                 , int* o_n_rows
+                                 , int* o_n_columns
+                                 , int *o_err_code);
 
     void DeleteFeatureMatrix(void *o_feature_matrix);
 
     void CopyFeatureMatrix(void *i_source, void *o_destination, int *o_err_code);
 
-    void *GetMatrixOfDeltaFeatures(void *i_feature_matrix, int i_order, int i_window, int *o_err_code);
+    void *GetMatrixOfDeltaFeatures(void *i_feature_matrix
+                                   , int i_order
+                                   , int i_window
+                                   , int* o_n_rows
+                                   , int* o_n_columns
+                                   , int *o_err_code);
     """
     global ffi
     global kaldi_lib
@@ -137,4 +146,6 @@ if __name__ == '__main__':
     feature_matrix_reader.open_archive(path_to_feature_archive)
     feature_matrix = feature_matrix_reader.get_feature_matrix(FILE_CODE)
     print feature_matrix.numpy_array()
+    delta_matrix = get_delta_features(feature_matrix, 3, 3)
+    print delta_matrix.numpy_array()
 
