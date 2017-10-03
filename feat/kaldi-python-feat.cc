@@ -69,10 +69,10 @@ void *GetMatrixOfDeltaFeatures(void *i_feature_matrix,
     *o_err_code = OK;
     try
     {
-        kaldi::Matrix<float> input_features = static_cast<kaldi::Matrix<float>>(i_feature_matrix);
+        kaldi::Matrix<float>* input_features = static_cast<kaldi::Matrix<float>* >(i_feature_matrix);
         kaldi::DeltaFeaturesOptions options(i_order, i_window);
         kaldi::Matrix<float>* new_features = new kaldi::Matrix<float>();
-        kaldi::ComputeDeltas(options, input_features, new_features);
+        kaldi::ComputeDeltas(options, *input_features, new_features);
         return new_features;
     }
     catch(...)

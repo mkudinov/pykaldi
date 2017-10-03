@@ -9,6 +9,7 @@
 #include "../base/kaldi-common.h"
 #include "../util/kaldi-io.h"
 #include "../util/common-utils.h"
+#include "../feat/feature-functions.h"
 
 
 using namespace kaldi_python_common_errors;
