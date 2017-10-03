@@ -40,6 +40,7 @@ def initialize_cffi():
         print "Library {} is not found in the LD_LIBRARY_PATH. Please, add ./lib to your LD_LIBRARY_PATH".format(LIB_PATH)
         exit(1)
 
+
 class KaldiMatrix(object):
     def __init__(self, ptr_to_matrix, shape):
         self._kaldi_lib = kaldi_lib
