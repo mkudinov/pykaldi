@@ -21,6 +21,7 @@ void *GetFeatureReader(char *i_specifier, int *o_err_code);
 
 void DeleteFeatureReader(void *o_feature_reader);
 
+//Non-possessive pointer to feature matrix
 const void* ReadFeatureMatrix(char* i_key, void *i_feature_reader, int* o_n_rows, int* o_n_columns, int *o_err_code);
 
 void CopyFeatureMatrix(void *i_source, void *o_destination, int *o_err_code);

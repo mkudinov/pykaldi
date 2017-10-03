@@ -34,30 +34,6 @@ void *GetContextTree(char *i_specifier
                    , int *o_err_code);
 void DeleteContextTree(void *o_context_tree);
 
-/* FeatureReader*/
-void *GetFeatureReader(char *i_specifier
-                     , int *o_err_code);
-void DeleteFeatureReader(void *o_feature_reader);
-
-/* FeatureMatrix */
-//Non-possessive pointer to feature matrix
-const void *ReadFeatureMatrix(char *i_key
-                            , void *i_feature_reader
-                            , int *o_n_rows
-                            , int *o_n_columns
-                            , int *o_err_code);
-void CopyFeatureMatrix(void *i_source
-                     , void *o_destination
-                     , int *o_err_code);
-
-void AddDeltaFeatures(void *i_feature_matrix
-                    , int i_n_rows
-                    , int i_n_columns
-                    , void *o_delta_feature_matrix
-                    , int *o_n_rows
-                    , int *o_n_columns
-                    , int *o_err_code);
-
 /* IntegerVector*/
 int *ReadIntegerVector(char *i_specifier
                      , int *o_n_elements

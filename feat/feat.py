@@ -14,47 +14,19 @@ from common.constants import print_error as print_error
 ffi = None
 kaldi_lib = None
 
-LIB_PATH = 'libpython-kaldi-asr-model.so'
+LIB_PATH = 'libpython-kaldi-feat.so'
 
 def initialize_cffi():
     src = """
-        /* TransitionModel*/
-        void *GetTransitionModel(char *i_transition_model_filename
-                                , int *o_err_code);
+    void *GetFeatureReader(char *i_specifier, int *o_err_code);
 
-        void DeleteTransitionModel(void *o_transition_model);
+    void DeleteFeatureReader(void *o_feature_reader);
 
-        int GetNumberOfTransitionIds(void *i_transition_model
-                                    , int *o_err_code);
+    const void* ReadFeatureMatrix(char* i_key, void *i_feature_reader, int* o_n_rows, int* o_n_columns, int *o_err_code);
 
-        int GetNumberOfPdfsTM(void *i_transition_model
-                             , int *o_err_code);
+    void CopyFeatureMatrix(void *i_source, void *o_destination, int *o_err_code);
 
-        int GetNumberOfPhones(void *i_transition_model
-                             , int *o_err_code);
-
-        /* Acoustic model*/
-        void *GetAcousticModel(char *i_transition_model_filename
-                              , int *o_err_code);
-
-        void DeleteAcousticModel(void *o_acoustic_model);
-
-        int GetNumberOfPdfsAM(void *i_acoustic_model
-                             , int *o_err_code);
-
-        int GetNumberOfGauss(void *i_acoustic_model
-                            , int *o_err_code);
-
-        int GetNumberOfGaussInPdf(void *i_acoustic_model
-                                 , int i_pdf_id
-                                 , int *o_err_code);
-
-        void BoostSilence(void *i_transition_model
-                        , void *io_acoustic_model
-                        , int *i_silence_phones
-                        , int silence_phones_size
-                        , double i_boost
-                        , int *o_err_code);
+    void *GetMatrixOfDeltaFeatures(void *i_feature_matrix, int i_order, int i_window, int *o_err_code);
     """
     global ffi
     global kaldi_lib
@@ -66,62 +38,87 @@ def initialize_cffi():
         print "Library {} is not found in the LD_LIBRARY_PATH. Please, add ./lib to your LD_LIBRARY_PATH".format(LIB_PATH)
         exit(1)
 
-class ASR_model(object):
-    def __init__(self, path_to_model=None):
-        self.kaldi_lib = kaldi_lib
-        if path_to_model is None:
-            raise RuntimeError('Only reading from file is currently supported!')
-        ptr_last_err_code = ffi.new("int *")
-        self._ptr_transition_model = self.kaldi_lib.GetTransitionModel(path_to_model, ptr_last_err_code)
-        self._ptr_acoustic_model = self.kaldi_lib.GetAcousticModel(path_to_model, ptr_last_err_code)
-        err_code = ptr_last_err_code[0]
-        if err_code != ked.OK:
-            raise RuntimeError('Transition model reading failed')
-        self.n_transitions = self.kaldi_lib.GetNumberOfTransitionIds(self._ptr_transition_model, ptr_last_err_code)
-        err_code = ptr_last_err_code[0]
-        if err_code != ked.OK:
-            raise RuntimeError('Model reference crashed')
-        self.n_pdfs = self.kaldi_lib.GetNumberOfPdfsAM(self._ptr_acoustic_model, ptr_last_err_code)
-        err_code = ptr_last_err_code[0]
-        if err_code != ked.OK:
-            raise RuntimeError('Model reference crashed')
-        self.n_gauss = self.kaldi_lib.GetNumberOfGauss(self._ptr_acoustic_model, ptr_last_err_code)
-        err_code = ptr_last_err_code[0]
-        if err_code != ked.OK:
-            raise RuntimeError('Model reference crashed')
+class KaldiMatrixProxy(object):
+    def __init__(self, ptr_to_matrix, shape):
+        self._kaldi_lib = kaldi_lib
+        self._ffi = ffi
+        self._ptr_to_matrix = ptr_to_matrix
+        self.shape = shape
+        self.valid = True
+        self._ptr_last_err_code = self._ffi.new("int *")
 
-    def boost_silence(self, silence_phones, boost_scale=1.0):
-        ptr_last_err_code = ffi.new("int *")
-        self.kaldi_lib.BoostSilence(self._ptr_transition_model,
-                                    self._ptr_acoustic_model,
-                                    ffi.new("int[]", silence_phones),
-                                    len(silence_phones),
-                                    boost_scale,
-                                    ptr_last_err_code)
-        err_code = ptr_last_err_code[0]
-        if err_code != ked.OK:
-            raise RuntimeError('Silence boost crashed')
+    @property
+    def handler(self):
+        return self._ptr_to_matrix
+
+    def numpy_array(self):
+        if not self.valid:
+            raise RuntimeError("Matrix proxy for object {} is not longer valid!".format(self._ptr_to_matrix[0]))
+        numpy_matrix = np.zeros(self.shape, dtype=np.float32)
+        self._kaldi_lib.CopyFeatureMatrix(self._ptr_to_matrix, self._ffi.cast('void *', numpy_matrix.__array_interface__['data'][0]), self._ptr_last_err_code)
+        return numpy_matrix
+
+
+class KaldiFeatureReader(object):
+    def __init__(self):
+        self._kaldi_lib = kaldi_lib
+        self._ffi = ffi
+        self._ptr_last_err_code = self._ffi.new("int *")
+        self._ptr_return_by_reference1 = self._ffi.new("int *")
+        self._ptr_return_by_reference2 = self._ffi.new("int *")
+        self._open = False
+        self._kaldi_matrices = []
 
     def __del__(self):
-        self.kaldi_lib.DeleteTransitionModel(self._ptr_transition_model)
-        self.kaldi_lib.DeleteAcousticModel(self._ptr_acoustic_model)
+        if self._open:
+            self.close_archive()
 
-    def __str__(self):
-        return "Model: %s transitions; %s pdfs; %s gauss" % (self.n_transitions, self.n_pdfs, self.n_gauss)
+    def get_feature_matrix(self, record_descriptor):
+        result_ptr = self._kaldi_lib.ReadFeatureMatrix(record_descriptor, self._feature_reader, self._ptr_return_by_reference1, self._ptr_return_by_reference2, self._ptr_last_err_code)
+        err_code = self._ptr_last_err_code[0]
+        if err_code != ked.OK:
+            print_error(err_code)
+            raise RuntimeError('Error trying to get feature matrix for descriptor {}'.format(record_descriptor))
+        num_rows = self._ptr_return_by_reference1[0]
+        num_columns = self._ptr_return_by_reference2[0]
+        feature_matrix = KaldiMatrixProxy(result_ptr, [num_rows, num_columns])
+        self._kaldi_matrices.append(feature_matrix)
+        return feature_matrix
 
-    @property
-    def acoustic_model_handle(self):
-        return self._ptr_acoustic_model
+    def open_archive(self, path_to_archive):
+        if self._open:
+            self.close_archive()
+        if not os.path.isfile(path_to_archive):
+            raise RuntimeError('Error trying to open archive {}. No such file or directory'.format(path_to_archive))
+        specifier = "ark:{}".format(path_to_archive)
+        self._feature_reader = self._kaldi_lib.GetFeatureReader(specifier, self._ptr_last_err_code)
+        err_code = self._ptr_last_err_code[0]
+        if err_code != ked.OK:
+            print_error(err_code)
+            raise RuntimeError('Error trying to open archive {}'.format(path_to_archive))
+        self._open = True
 
-    @property
-    def transition_model_handle(self):
-        return self._ptr_transition_model
+    def close_archive(self):
+        if self._open:
+            self._destroy_all_matrices()
+            self._kaldi_lib.DeleteFeatureReader(self._feature_reader)
+        self._open = False
+
+    def _destroy_all_matrices(self):
+        for matrix in self._kaldi_matrices:
+            matrix.valid = False
+        self._kaldi_matrices = []
 
 
 initialize_cffi()
 if __name__ == '__main__':
     KALDI_PATH = '/home/mkudinov/KALDI/kaldi_new/kaldi/'
     RUSPEECH_EXP_PATH = 'egs/ruspeech/s1/'
-    PATH_TO_MODEL = KALDI_PATH + RUSPEECH_EXP_PATH + 'exp/tri1/final.mdl'
-    asr_model = ASR_model(PATH_TO_MODEL)
-    print asr_model
+    FEATURE_PATH = 'mfcc/raw_mfcc_train.1.ark'
+    FILE_CODE = "TRAIN-FCT002-002B0181"
+    feature_matrix_reader = KaldiFeatureReader()
+    path_to_feature_archive = KALDI_PATH + RUSPEECH_EXP_PATH + FEATURE_PATH
+    feature_matrix_reader.open_archive(path_to_feature_archive)
+    feature_matrix = feature_matrix_reader.get_feature_matrix(FILE_CODE)
+    print feature_matrix.numpy_array()
+
