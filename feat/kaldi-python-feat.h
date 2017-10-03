@@ -20,13 +20,22 @@ void *GetFeatureReader(char *i_specifier, int *o_err_code);
 
 void DeleteFeatureReader(void *o_feature_reader);
 
-const void* ReadFeatureMatrix(char* i_key, void *i_feature_reader, int* o_n_rows, int* o_n_columns, int *o_err_code);
+const void* ReadFeatureMatrix(char* i_key
+                             , void *i_feature_reader
+                             , int* o_n_rows
+                             , int* o_n_columns
+                             , int *o_err_code);
 
 void DeleteFeatureMatrix(void *o_feature_matrix);
 
 void CopyFeatureMatrix(void *i_source, void *o_destination, int *o_err_code);
 
-void *GetMatrixOfDeltaFeatures(void *i_feature_matrix, int i_order, int i_window, int *o_err_code);
+void *GetMatrixOfDeltaFeatures(void *i_feature_matrix
+                               , int i_order
+                               , int i_window
+                               , int* o_n_rows
+                               , int* o_n_columns
+                               , int *o_err_code);
 } //namespace kaldi_python_feat
 } //extern "C"
 #endif

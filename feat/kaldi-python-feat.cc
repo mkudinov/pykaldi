@@ -70,10 +70,12 @@ void CopyFeatureMatrix(void *i_source, void *o_destination, int *o_err_code)
     }
 }
 
-void *GetMatrixOfDeltaFeatures(void *i_feature_matrix,
-                      int i_order,
-                      int i_window,
-                      int *o_err_code)
+void *GetMatrixOfDeltaFeatures(void *i_feature_matrix
+                               , int i_order
+                               , int i_window
+                               , int* o_n_rows
+                               , int* o_n_columns
+                               , int *o_err_code);
 {
     *o_err_code = OK;
     try
@@ -82,6 +84,8 @@ void *GetMatrixOfDeltaFeatures(void *i_feature_matrix,
         kaldi::DeltaFeaturesOptions options(i_order, i_window);
         kaldi::Matrix<float>* new_features = new kaldi::Matrix<float>();
         kaldi::ComputeDeltas(options, *input_features, new_features);
+        *o_n_rows = new_features->NumRows();
+        *o_n_columns = new_features->NumCols();
         return new_features;
     }
     catch(...)

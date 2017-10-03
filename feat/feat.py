@@ -110,6 +110,22 @@ class KaldiFeatureReader(object):
         self._open = False
 
 
+def get_delta_features(feature_matrix, order, window):
+    ptr_to_result = ffi.new("int *")
+    ptr_return_by_reference1 = ffi.new("int *")
+    ptr_return_by_reference2 = ffi.new("int *")
+    ptr_delta_matrix = kaldi_lib.GetMatrixOfDeltaFeatures(feature_matrix.handle, order, window,
+                                                          ptr_return_by_reference1, ptr_return_by_reference2,
+                                                          ptr_to_result)
+    err_code = ptr_to_result[0]
+    if err_code != ked.OK:
+        print_error(err_code)
+        raise RuntimeError('Error trying to compute delta features')
+    num_rows = ptr_return_by_reference1[0]
+    num_columns = ptr_return_by_reference2[0]
+    return KaldiMatrix(ptr_delta_matrix, [num_rows, num_columns])
+
+
 initialize_cffi()
 if __name__ == '__main__':
     KALDI_PATH = '/home/mkudinov/KALDI/kaldi_new/kaldi/'
