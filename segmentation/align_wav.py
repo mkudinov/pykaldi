@@ -11,8 +11,8 @@ if not os.path.isfile('common/constants.py'):
 
 from common.constants import KALDI_ERR_CODES as ked
 from common.constants import print_error as print_error
-from readers.utilities import ReaderUtilities as kaldi_reader
-from readers.utilities import KaldiFeatureReader
+from utilities.utilities import ReaderUtilities as kaldi_reader
+from utilities.utilities import KaldiFeatureReader
 
 ffi = None
 kaldi_lib = None
@@ -259,18 +259,27 @@ def load_word_table(path_to_word_table):
 
 initialize_cffi()
 if __name__ == '__main__':
-    context_tree = ContextTree(filename=PATH_TO_TRIPHONE_MODEL)
-    disambiguation_symbols = IntegerVector(filename=PATH_TO_DISAMBIGUATION_SYMBOLS) 
-    transition_model = TransitionModel(filename=PATH_TO_MODEL)
-    acoustic_model = AcousticModel(filename=PATH_TO_MODEL)
-    text_fst_compiler = TextFstCompiler(PATH_TO_LEXICAL_FST, context_tree, disambiguation_symbols, transition_model)
-    code_to_char, char_to_code = load_phones_table(PATH_TO_PHONES_TABLE)
-    word_to_code = load_word_table(PATH_TO_WORD_TABLE)
-    aligner = WavAligner(text_fst_compiler, transition_model, acoustic_model, char_to_code)
-    transcriber = Transcriber(word_to_code, UNK_CODE, code_to_char, char_to_code, encoding='cp1251')
-    aligner.add_phrase(TEST_PHRASE, transcriber.transcribe(TEST_PHRASE))
-    path_to_feature_archive = KALDI_PATH + RUSPEECH_EXP_PATH + FEATURE_PATH
-    feature_matrix_reader = KaldiFeatureReader()
-    feature_matrix_reader.open_archive(path_to_feature_archive)
-    feature_matrix = feature_matrix_reader.get_feature_matrix(TEST_PHRASE_CODE)
-    aligner.align(feature_matrix, TEST_PHRASE)
+    # context_tree = ContextTree(filename=PATH_TO_TRIPHONE_MODEL)
+    # disambiguation_symbols = IntegerVector(filename=PATH_TO_DISAMBIGUATION_SYMBOLS)
+    # transition_model = TransitionModel(filename=PATH_TO_MODEL)
+    # acoustic_model = AcousticModel(filename=PATH_TO_MODEL)
+    # text_fst_compiler = TextFstCompiler(PATH_TO_LEXICAL_FST, context_tree, disambiguation_symbols, transition_model)
+    # code_to_char, char_to_code = load_phones_table(PATH_TO_PHONES_TABLE)
+    # word_to_code = load_word_table(PATH_TO_WORD_TABLE)
+    # aligner = WavAligner(text_fst_compiler, transition_model, acoustic_model, char_to_code)
+    # transcriber = Transcriber(word_to_code, UNK_CODE, code_to_char, char_to_code, encoding='cp1251')
+    # aligner.add_phrase(TEST_PHRASE, transcriber.transcribe(TEST_PHRASE))
+    # path_to_feature_archive = KALDI_PATH + RUSPEECH_EXP_PATH + FEATURE_PATH
+    # feature_matrix_reader = KaldiFeatureReader()
+    # feature_matrix_reader.open_archive(path_to_feature_archive)
+    # feature_matrix = feature_matrix_reader.get_feature_matrix(TEST_PHRASE_CODE)
+    # aligner.align(feature_matrix, TEST_PHRASE)
+    asr_model = ASR_model(filename=PATH_TO_MODEL)
+    asr_model.boost_silence(1.0)
+    aligner = SpeechToTextAligner(asr_model, transition_scale=1.0, acoustic_scale=1.0, self_loop_scale=0.1, beam=10, retry_beam=40, careful=False)
+    phrase_fst = compile_fst(TEST_PHRASE)
+    features = get_features(TEST_PHRASE_CODE)
+    features.apply_cmvn()
+    features.add_deltas()
+    alignment = aligner.get_alignment(features, phrase_fst)
+
