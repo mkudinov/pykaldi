@@ -4,12 +4,13 @@ import os
 import pdb
 import sys
 
-if not os.path.isfile('common/constants.py'):
-    print "No import module found in the PYTHONPATH. Please, add current directory to your PYTHON_PATH"
-    exit(1)
+# if not os.path.isfile('common/constants.py'):
+#     print "No import module found in the PYTHONPATH. Please, add current directory to your PYTHON_PATH"
+#     exit(1)
 
 from common.constants import KALDI_ERR_CODES as ked
 from common.constants import print_error as print_error
+import feat.feat as features
 
 ffi = None
 kaldi_lib = None
@@ -44,6 +45,20 @@ initialize_cffi()
 if __name__ == '__main__':
     KALDI_PATH = '/home/mkudinov/KALDI/kaldi_new/kaldi/'
     RUSPEECH_EXP_PATH = 'egs/ruspeech/s1/'
-    PATH_TO_MODEL = KALDI_PATH + RUSPEECH_EXP_PATH + 'exp/tri1/final.mdl'
-    asr_model = ASR_model(PATH_TO_MODEL)
-    print asr_model
+    FEATURE_PATH = 'mfcc/raw_mfcc_train.1.ark'
+    FILE_CODE = "TRAIN-FCT002-002B0181"
+    CMVN_STATS_PATH = "mfcc/cmvn_train.ark"
+    CMVN_CODE = "FCT002"
+    feature_matrix_reader = features.KaldiFeatureReader()
+    path_to_feature_archive = KALDI_PATH + RUSPEECH_EXP_PATH + FEATURE_PATH
+    path_to_cmvn_archive = KALDI_PATH + RUSPEECH_EXP_PATH + CMVN_STATS_PATH
+    feature_matrix_reader.open_archive(path_to_feature_archive, np.float32)
+    feature_matrix = feature_matrix_reader.get_matrix(FILE_CODE)
+    feature_matrix_reader.open_archive(path_to_cmvn_archive, np.float64)
+    cmvn_matrix = feature_matrix_reader.get_matrix(CMVN_CODE)
+    print feature_matrix.numpy_array()
+    print ""
+    print cmvn_matrix.numpy_array()
+    print ""
+    cmvn_transform(cmvn_matrix, feature_matrix, True)
+    print feature_matrix.numpy_array()

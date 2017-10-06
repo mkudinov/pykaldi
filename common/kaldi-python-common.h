@@ -27,6 +27,12 @@ enum
 };
 } //namespace kaldi_python_common_errors
 
+namespace numpy_constants
+{
+    extern const char *NP_FLOAT_32;
+    extern const char *NP_FLOAT_64;
+}
+
 namespace kaldi_python_common
 {
 using namespace kaldi_python_common_errors;

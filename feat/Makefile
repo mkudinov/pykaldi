@@ -6,7 +6,7 @@ OBJFILES = kaldi-python-feat.o
 
 LIBNAME = python-kaldi-feat
 
-ADDLIBS = ../../base/kaldi-base.a ../../util/kaldi-util.a ../../matrix/kaldi-matrix.a ../../feat/kaldi-feat.a ../common/python-kaldi-common.o
+ADDLIBS = ../../base/kaldi-base.a ../../util/kaldi-util.a ../../matrix/kaldi-matrix.a ../../feat/kaldi-feat.a ../common/python-kaldi-common.so
 
 LIBFILE = lib$(LIBNAME).so
 

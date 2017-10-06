@@ -41,5 +41,10 @@ void DeleteAlignmentBuffer(Alignment *o_alignment_buffer)
     o_alignment_buffer->number_of_phones = 0;
     delete o_alignment_buffer;
 }
-
 } //namespace kaldi_python_common
+
+namespace numpy_constants
+{
+const char* NP_FLOAT_32 = "float32";
+const char* NP_FLOAT_64 = "float64";
+} //namespace numpy_constants
