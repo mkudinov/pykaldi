@@ -161,6 +161,6 @@ if __name__ == '__main__':
     feature_matrix_reader.open_archive(path_to_feature_archive, np.float32)
     feature_matrix = feature_matrix_reader.get_matrix(FILE_CODE)
     print feature_matrix.numpy_array()
-    delta_matrix = get_delta_features(feature_matrix, 3, 3)
+    delta_matrix = get_delta_features(feature_matrix, 2, 2)
     print delta_matrix.numpy_array()
 
