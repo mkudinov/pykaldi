@@ -5,32 +5,24 @@ import os
 import pdb
 import sys
 
-if not os.path.isfile('common/constants.py'):
-    print "No import module found in the PYTHONPATH. Please, add current directory to your PYTHON_PATH"
-    exit(1)
+#if not os.path.isfile('common/constants.py'):
+#    print "No import module found in the PYTHONPATH. Please, add current directory to your PYTHON_PATH"
+#    exit(1)
 
 from common.constants import KALDI_ERR_CODES as ked
 from common.constants import print_error as print_error
-from utilities.utilities import ReaderUtilities as kaldi_reader
-from utilities.utilities import KaldiFeatureReader
+from utilities.utilities import KaldiIntegerVector
+from asr_model.asr_model import ASR_model
+from fst.fst import KaldiFST
+from tree.tree import ContextDependency
+from decoder.training_graph_compiler import TrainingGraphCompiler
+from feat.feat import KaldiFeatureReader, KaldiMatrix, get_delta_features
+from transform.transform import cmvn_transform
 
 ffi = None
 kaldi_lib = None
 
-KALDI_PATH = '/home/mkudinov/KALDI/kaldi_new/kaldi/'
-RUSPEECH_EXP_PATH = 'egs/ruspeech/s1/'
-FEATURE_PATH = 'mfcc/raw_mfcc_train.1.ark'
 LIB_PATH = 'libpython-kaldi-segmentation.so'
-PATH_TO_MODEL = KALDI_PATH + RUSPEECH_EXP_PATH + 'exp/tri1/final.mdl'
-PATH_TO_PHONES_TABLE = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/phones.txt'
-PATH_TO_TRIPHONE_MODEL = KALDI_PATH + RUSPEECH_EXP_PATH + 'exp/tri1/tree'
-PATH_TO_DISAMBIGUATION_SYMBOLS = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/phones/disambig.int'
-PATH_TO_LEXICAL_FST = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/L.fst'
-TEST_PHRASE_CODE = 'TRAIN-FCT002-002B0181'
-TEST_PHRASE = u'уха обычно готовится из пресноводных рыб'
-PATH_TO_PHONES_TABLE = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/phones.txt'
-PATH_TO_WORD_TABLE = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/words.txt'
-UNK_CODE = '<UNK>'
 
 def initialize_cffi():
     src = """
@@ -80,80 +72,6 @@ def initialize_cffi():
         exit(1)
 
 
-class IntegerVector(object):
-    def __init__(self, vec_handler=None, n_elements=None, filename=None):
-        if vec_handler is not None and n_elements is not None:
-            self._handler = vec_handler
-            self._n_elements = n_elements
-        elif filename is not None:
-            self._handler, self._n_elements = kaldi_reader.read_integer_vector(filename)
-        else:
-            raise RuntimeError("Constructor arguments are missing")
-
-    def __del__(self):
-        kaldi_reader.delete_integer_vector(self._handler)
-
-    @property
-    def handler(self):
-        return self._handler
-
-    @property
-    def n_elements(self):
-        return self._n_elements
-
-
-
-class ContextTree(object):
-    def __init__(self, ctx_handler=None, filename=None):
-        if ctx_handler is not None:
-            self._handler = ctx_handler
-        elif filename is not None:
-            self._handler = kaldi_reader.read_context_tree(filename)
-        else:
-            raise RuntimeError("Constructor arguments are missing")
-
-    def __del__(self):
-        kaldi_reader.delete_context_tree(self._handler)
-
-    @property
-    def handler(self):
-        return self._handler
-
-
-class TransitionModel(object):
-    def __init__(self, model_handler=None, filename=None):
-        if model_handler is not None:
-            self._handler = model_handler
-        elif filename is not None:
-            self._handler = kaldi_reader.read_transition_model(filename)
-        else:
-            raise RuntimeError("Constructor arguments are missing")
-
-    def __del__(self):
-        kaldi_reader.delete_transition_model(self._handler)
-
-    @property
-    def handler(self):
-        return self._handler
-
-
-class AcousticModel(object):
-    def __init__(self, model_handler=None, filename=None):
-        if model_handler is not None:
-            self._handler = model_handler
-        elif filename is not None:
-            self._handler = kaldi_reader.read_acoustic_model(filename)
-        else:
-            raise RuntimeError("Constructor arguments are missing")
-
-    def __del__(self):
-        kaldi_reader.delete_acoustic_model(self._handler)
-
-    @property
-    def handler(self):
-        return self._handler
-
-
 class PhraseMatcher(object):
     def __init__(self, text_fst_compiler, text_codes):
         self._kaldi_lib = kaldi_lib
@@ -176,21 +94,6 @@ class PhraseMatcher(object):
 
     def __del__(self):
         self._kaldi_lib.DeleteAligner(self._aligner)
-
-
-class TextFstCompiler(object):
-    def __init__(self, path_to_lexicon_fst, context_tree, disambiguation_symbols, transition_model):
-        self._kaldi_lib = kaldi_lib
-        self._ffi = ffi
-        self._ptr_last_err_code = self._ffi.new("int *")
-        self.handler = self._kaldi_lib.GetTextFstCompiler(context_tree.handler, disambiguation_symbols.handler, disambiguation_symbols.n_elements, transition_model.handler, path_to_lexicon_fst, self._ptr_last_err_code)
-        err_code = self._ptr_last_err_code[0]
-        if err_code != ked.OK:
-            print_error(err_code)
-            raise RuntimeError("Error creating text fst compiler")
-
-    def __del__(self):
-         self._kaldi_lib.DeleteTextFstCompiler(self.handler)
 
 
 class WavAligner(object):
@@ -259,27 +162,48 @@ def load_word_table(path_to_word_table):
 
 initialize_cffi()
 if __name__ == '__main__':
-    # context_tree = ContextTree(filename=PATH_TO_TRIPHONE_MODEL)
-    # disambiguation_symbols = IntegerVector(filename=PATH_TO_DISAMBIGUATION_SYMBOLS)
-    # transition_model = TransitionModel(filename=PATH_TO_MODEL)
-    # acoustic_model = AcousticModel(filename=PATH_TO_MODEL)
-    # text_fst_compiler = TextFstCompiler(PATH_TO_LEXICAL_FST, context_tree, disambiguation_symbols, transition_model)
-    # code_to_char, char_to_code = load_phones_table(PATH_TO_PHONES_TABLE)
-    # word_to_code = load_word_table(PATH_TO_WORD_TABLE)
-    # aligner = WavAligner(text_fst_compiler, transition_model, acoustic_model, char_to_code)
-    # transcriber = Transcriber(word_to_code, UNK_CODE, code_to_char, char_to_code, encoding='cp1251')
-    # aligner.add_phrase(TEST_PHRASE, transcriber.transcribe(TEST_PHRASE))
-    # path_to_feature_archive = KALDI_PATH + RUSPEECH_EXP_PATH + FEATURE_PATH
-    # feature_matrix_reader = KaldiFeatureReader()
-    # feature_matrix_reader.open_archive(path_to_feature_archive)
-    # feature_matrix = feature_matrix_reader.get_feature_matrix(TEST_PHRASE_CODE)
-    # aligner.align(feature_matrix, TEST_PHRASE)
-    asr_model = ASR_model(filename=PATH_TO_MODEL)
-    asr_model.boost_silence(1.0)
+    KALDI_PATH = '/home/mkudinov/KALDI/kaldi_new/kaldi/'
+    RUSPEECH_EXP_PATH = 'egs/ruspeech/s1/'
+    PATH_TO_MODEL = KALDI_PATH + RUSPEECH_EXP_PATH + 'exp/tri1/final.mdl'
+    FEATURE_PATH = 'mfcc/raw_mfcc_train.1.ark'
+    FILE_CODE = "TRAIN-FCT002-002B0181"
+    CMVN_STATS_PATH = "mfcc/cmvn_train.ark"
+    CMVN_CODE = "FCT002"
+    PATH_FO_FEATURE_ARCHIVE = KALDI_PATH + RUSPEECH_EXP_PATH + FEATURE_PATH
+    PATH_TO_CMVN_ARCHIVE = KALDI_PATH + RUSPEECH_EXP_PATH + CMVN_STATS_PATH
+    PATH_TO_LEXICAL_FST = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/L.fst'
+    PATH_TO_CONTEXT_TREE = KALDI_PATH + RUSPEECH_EXP_PATH + 'exp/tri1/tree'
+    PATH_TO_DISAMBIGUATION_SYMBOLS = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/phones/disambig.int'
+    PATH_TO_PHONES_TABLE = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/phones.txt'
+    PATH_TO_WORD_TABLE = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/words.txt'
+    UNK_CODE = '<UNK>'
+    TEST_PHRASE = u'уха обычно готовится из пресноводных рыб'
+
+    #ASR model
+    asr_model = ASR_model(PATH_TO_MODEL)
+    # asr_model.boost_silence(1.0)
+
+    #Graph Compiler
+    fst = KaldiFST(PATH_TO_LEXICAL_FST)
+    context_dependency = ContextDependency(PATH_TO_CONTEXT_TREE)
+    disambiguation_symbols = KaldiIntegerVector()
+    disambiguation_symbols.load(PATH_TO_DISAMBIGUATION_SYMBOLS)
+    graph_compiler = TrainingGraphCompiler(asr_model, context_dependency, fst, disambiguation_symbols)
+
+    #Reading MFCC features
+    feature_matrix_reader = KaldiFeatureReader()
+    feature_matrix_reader.open_archive(PATH_FO_FEATURE_ARCHIVE, np.float32)
+    mfcc_feature_matrix = feature_matrix_reader.get_matrix(FILE_CODE)
+
+    #CMVN transform
+    feature_matrix_reader.open_archive(PATH_TO_CMVN_ARCHIVE, np.float64)
+    cmvn_matrix = feature_matrix_reader.get_matrix(CMVN_CODE)
+    cmvn_transform(cmvn_matrix, mfcc_feature_matrix, True)
+
+    #Delta + delta delta features
+    delta_feature_matrix = get_delta_features(mfcc_feature_matrix, 2, 2)
+
     aligner = SpeechToTextAligner(asr_model, transition_scale=1.0, acoustic_scale=1.0, self_loop_scale=0.1, beam=10, retry_beam=40, careful=False)
     phrase_fst = compile_fst(TEST_PHRASE)
-    features = get_features(TEST_PHRASE_CODE)
-    features.apply_cmvn()
-    features.add_deltas()
-    alignment = aligner.get_alignment(features, phrase_fst)
+    alignment = aligner.get_alignment(delta_feature_matrix, phrase_fst)
 
