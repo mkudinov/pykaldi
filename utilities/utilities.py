@@ -14,12 +14,7 @@ from common.constants import print_error as print_error
 ffi = None
 kaldi_lib = None
 
-KALDI_PATH = '/home/mkudinov/KALDI/kaldi_new/kaldi/'
-RUSPEECH_EXP_PATH = 'egs/ruspeech/s1/'
-ALIGNS_PATH = 'exp/tri1/ali.1.gz'
 LIB_PATH = 'libpython-kaldi-utilities.so'
-PATH_TO_TRANSITION_MODEL = KALDI_PATH + RUSPEECH_EXP_PATH + 'exp/tri1/final.mdl'
-PATH_TO_PHONES_TABLE = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/phones.txt'
 
 def initialize_cffi():
     src = """
@@ -106,11 +101,8 @@ class KaldiIntegerVector(object):
 
 initialize_cffi()
 if __name__ == '__main__':
-    #alignment_reader = KaldiAlignmentReader(PATH_TO_TRANSITION_MODEL, PATH_TO_PHONES_TABLE)
-    #path_to_archive = KALDI_PATH + RUSPEECH_EXP_PATH + ALIGNS_PATH
-    #alignment_reader.open_archive(path_to_archive)
-    #alignment = alignment_reader.get_alignment("TRAIN-FCT018-018R0070")
-    #print alignment
+    KALDI_PATH = '/home/mkudinov/KALDI/kaldi_new/kaldi/'
+    RUSPEECH_EXP_PATH = 'egs/ruspeech/s1/'
     PATH_TO_DISAMBIGUATION_SYMBOLS = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/phones/disambig.int'
     disambiguation_symbols = KaldiIntegerVector()
     disambiguation_symbols.load(PATH_TO_DISAMBIGUATION_SYMBOLS)
