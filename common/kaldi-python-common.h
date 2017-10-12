@@ -36,22 +36,11 @@ namespace numpy_constants
 namespace kaldi_python_common
 {
 using namespace kaldi_python_common_errors;
-typedef struct 
-{
-    int number_of_phones;
-    int *phones;
-    int *num_repeats_per_phone;
-} Alignment;
-
 typedef struct
 {
     int number_of_elements;
     int *elements;
 } IntegerVector;
-
-/* AlignmentBuffer*/
-Alignment *CreateAlignmentBuffer(int i_number_of_phones, int *o_err_code);
-void DeleteAlignmentBuffer(Alignment *o_alignment_buffer);
 
 } //namespace kaldi_python_common
 } //extern "C"

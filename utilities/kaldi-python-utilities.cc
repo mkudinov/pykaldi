@@ -66,10 +66,5 @@ void *InitIntegerVector(int *i_source, int i_size, int *o_err_code)
     }
     return result;
 }
-
-void DeleteAlignment(Alignment *o_alignment_buffer)
-{
-    kaldi_python_common::DeleteAlignmentBuffer(o_alignment_buffer);
-}
 } //namespace kaldi_python_readers 
 } //extern "C"

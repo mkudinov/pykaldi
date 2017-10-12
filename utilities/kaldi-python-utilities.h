@@ -12,8 +12,6 @@
 #include "../gmm/am-diag-gmm.h"
 #include "../feat/feature-functions.h"
 
-
-using kaldi_python_common::Alignment;
 using namespace kaldi_python_common_errors;
 extern "C"
 {
@@ -31,8 +29,6 @@ void CopyIntegerVector(int *i_source
 void *InitIntegerVector(int *i_source
                      , int i_size
                      , int *o_err_code);
-//from common.h
-void DeleteAlignment(Alignment *o_alignment_buffer);
 } //namespace kaldi_python_readers
 } //extern "C"
 #endif

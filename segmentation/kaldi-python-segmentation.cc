@@ -22,6 +22,45 @@ void DeleteAlignmentReader(void *o_alignment_reader)
     }
 }
 
+Alignment *CreateAlignmentBuffer(int i_number_of_phones, int *o_err_code)
+{
+    *o_err_code = OK;
+    Alignment *alignment_buffer = new Alignment;
+    if(!alignment_buffer)
+    {
+        *o_err_code = MEMORY_ALLOCATION_ERROR;
+        return 0;
+    }
+    alignment_buffer->number_of_phones = i_number_of_phones;
+    try
+    {
+        alignment_buffer->num_repeats_per_phone = new int[i_number_of_phones];
+        alignment_buffer->phones = new int[i_number_of_phones];
+    }
+    catch(...)
+    {
+        *o_err_code = MEMORY_ALLOCATION_ERROR;
+    }
+    return alignment_buffer;
+}
+
+void DeleteAlignmentBuffer(Alignment *o_alignment_buffer)
+{
+    if(o_alignment_buffer)
+    {
+        if(o_alignment_buffer->phones)
+        {
+            delete[] o_alignment_buffer->phones;
+        }
+        if(o_alignment_buffer->num_repeats_per_phone)
+        {
+            delete[] o_alignment_buffer->num_repeats_per_phone;
+        }
+    }
+    o_alignment_buffer->number_of_phones = 0;
+    delete o_alignment_buffer;
+}
+
 Alignment *ReadAlignment(char *i_key, void *i_transition_model, void *i_alignment_reader, int *o_err_code)
 {
     *o_err_code = OK;
@@ -41,7 +80,7 @@ Alignment *ReadAlignment(char *i_key, void *i_transition_model, void *i_alignmen
     std::vector<vector<int32> > split;
     std::vector<int32> alignment = alignment_reader->Value(key);
     kaldi::SplitToPhones(*transition_model, alignment, &split);
-    Alignment *result = kaldi_python_common::CreateAlignmentBuffer(split.size(), o_err_code);
+    Alignment *result = CreateAlignmentBuffer(split.size(), o_err_code);
     if(*o_err_code != OK)
         return 0;
     try
@@ -60,6 +99,11 @@ Alignment *ReadAlignment(char *i_key, void *i_transition_model, void *i_alignmen
         return 0;
     }
     return result;
+}
+
+void DeleteAlignment(Alignment *o_alignment_buffer)
+{
+    DeleteAlignmentBuffer(o_alignment_buffer);
 }
 
 Alignment *Align(void *i_features
@@ -158,7 +202,7 @@ Alignment *Align(void *i_features
     //kaldi::BaseFloat like = -(weight.Value1()+weight.Value2()) / i_acoustic_scale;
     std::vector<std::vector<int32> > split;
     kaldi::SplitToPhones(*transition_model, alignment, &split);
-    Alignment *result = kaldi_python_common::CreateAlignmentBuffer(split.size(), o_err_code);
+    Alignment *result = CreateAlignmentBuffer(split.size(), o_err_code);
     if(*o_err_code != OK)
         return 0;
     try 
