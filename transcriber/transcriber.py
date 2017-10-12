@@ -19,3 +19,12 @@ def load_word_table(path_to_word_table):
         code = int(word_code[1])
         word_table[word] = code
     return word_table
+
+def load_phone_table(path_to_phones_table):
+    phone_table = []
+    for line in open(path_to_phones_table, 'r'):
+        phone, phone_id = line.split(' ')
+        phone_table.append(phone)
+    if len(phone_table) == 0:
+        raise RuntimeError('Empty phone table read from file {}'.format(path_to_phones_table))
+    return phone_table
