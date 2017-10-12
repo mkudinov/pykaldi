@@ -148,6 +148,10 @@ class KaldiIntegerVector(object):
             self._kaldi_lib.DeleteIntegerVector(self._ptr_integer_vector)
 
     def _initialize_from_python_list(self, python_list):
+        if  len(python_list) == 0:
+            raise RuntimeError("ERROR: kaldi vectors of zero length are not supported")
+        if not isinstance(python_list[0], int):
+            raise RuntimeError("ERROR: python_list algument must be a vector of integers. type %s is given." % type(python_list[0]))
         ptr_last_err_code = self._ffi.new("int *")
         self._n_elements = len(python_list)
         ffi_python_list = self._ffi.new("int[]", python_list)
@@ -188,3 +192,5 @@ if __name__ == '__main__':
     disambiguation_symbols.load(PATH_TO_DISAMBIGUATION_SYMBOLS)
     print "Disamb.symbols: ", len(disambiguation_symbols)
     print disambiguation_symbols.numpy_array()
+    test_vector = KaldiIntegerVector(range(10))
+    print test_vector.numpy_array()
