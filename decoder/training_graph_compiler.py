@@ -78,6 +78,8 @@ class TrainingGraphCompiler(object):
         lexical_fst._ptr_fst = ffi.NULL
 
     def compile_phrase_graph(self, transcript):
+        if isinstance(transcript, list):
+            transcript = KaldiIntegerVector(transcript)
         ptr_last_err_code = ffi.new("int *")
         decoder_fst_ptr = kaldi_lib.CompilePhraseGraphFromText(self._ptr_graph_compiler, transcript.handle, len(transcript),
                                                              ptr_last_err_code)
@@ -100,8 +102,8 @@ if __name__ == '__main__':
     KALDI_PATH = '/home/mkudinov/KALDI/kaldi_new/kaldi/'
     RUSPEECH_EXP_PATH = 'egs/ruspeech/s1/'
     PATH_TO_LEXICAL_FST = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/L.fst'
-    fst = KaldiFST(PATH_TO_LEXICAL_FST)
-    print fst
+    lexical_fst = KaldiFST(PATH_TO_LEXICAL_FST)
+    print lexical_fst
     PATH_TO_MODEL = KALDI_PATH + RUSPEECH_EXP_PATH + 'exp/tri1/final.mdl'
     asr_model = ASR_model(PATH_TO_MODEL)
     print asr_model
@@ -112,5 +114,7 @@ if __name__ == '__main__':
     disambiguation_symbols = KaldiIntegerVector()
     disambiguation_symbols.load(PATH_TO_DISAMBIGUATION_SYMBOLS)
     print "Disamb.symbols: ", len(disambiguation_symbols)
-    graph_compiler = TrainingGraphCompiler(asr_model, context_dependency, fst, disambiguation_symbols)
+    graph_compiler = TrainingGraphCompiler(asr_model, context_dependency, lexical_fst, disambiguation_symbols)
     print "Graph compile Kaldi handle ", graph_compiler.handle
+    decoder_fst = graph_compiler.compile_phrase_graph([280, 281, 282, 283, 284, 285])
+    print decoder_fst
