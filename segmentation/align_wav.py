@@ -18,6 +18,7 @@ from tree.tree import ContextDependency
 from decoder.training_graph_compiler import TrainingGraphCompiler
 from feat.feat import KaldiFeatureReader, KaldiMatrix, get_delta_features
 from transform.transform import cmvn_transform
+from transcriber.transcriber import Transcriber, load_word_table
 
 ffi = None
 kaldi_lib = None
@@ -26,26 +27,21 @@ LIB_PATH = 'libpython-kaldi-segmentation.so'
 
 def initialize_cffi():
     src = """
-    typedef struct 
+    typedef struct
     {
         int number_of_phones;
         int *phones;
         int *num_repeats_per_phone;
-    } Alignment;  
-    void* GetTextFstCompiler(void *i_context_tree
-                       , int *i_disambiguation_symbols
-                       , int i_size_of_disambiguation_symbols
-                       , void *i_transition_model
-                       , char *i_lex_in_filename
-                       , int *o_err_code);
-    void DeleteTextFstCompiler(void *o_compiler);
-
-    /*Fst for the phrase*/
-    void *GetAlignerFst(void *i_text_fst_compiler
-                  , int *i_transcript
-                  , int i_transcript_len
-                  , int *o_err_code);
-    void DeleteAlignerFst(void *o_aligner_fst);
+    } Alignment;
+    /* AlignmentReader */
+    void *GetAlignmentReader(char *i_specifier
+                          ,  int *o_err_code);
+    void DeleteAlignmentReader(void *o_alignment_reader);
+    Alignment *ReadAlignment(char *i_key
+                           , void *i_transition_model
+                           , void *i_alignment_reader
+                           , int *o_err_code);
+    void DeleteAlignment(Alignment *o_alignment_buffer);
     /* Main function*/
     Alignment *Align(void *i_features
                , void *i_transition_model
@@ -58,8 +54,6 @@ def initialize_cffi():
                , float i_retry_beam
                , bool i_careful
                , int *o_err_code);
-
-    void DeleteAlignment(Alignment *o_alignment_buffer);
     """
     global ffi
     global kaldi_lib
@@ -72,92 +66,78 @@ def initialize_cffi():
         exit(1)
 
 
-class PhraseMatcher(object):
-    def __init__(self, text_fst_compiler, text_codes):
+class KaldiAlignmentReader(object):
+    def __init__(self, path_to_transition_model, path_to_phones_table):
         self._kaldi_lib = kaldi_lib
         self._ffi = ffi
-        self._text_codes = self._ffi.new("int[]", text_codes)
-        self._ptr_last_err_code = self._ffi.new("int *")
-        self._aligner = self._kaldi_lib.GetAlignerFst(text_fst_compiler.handler, self._text_codes, len(text_codes), self._ptr_last_err_code)
+        self._ptr_last_err_code = self._ffi.new("int*")
+        self._open = False
+        self._result_buffer = None
+        self._transition_model = self._kaldi_lib.GetTransitionModel(path_to_transition_model, self._ptr_last_err_code)
         err_code = self._ptr_last_err_code[0]
         if err_code != ked.OK:
             print_error(err_code)
-            raise RuntimeError("Error creating aligner")
-
-    @property
-    def handler(self):
-        return self._aligner
-
-    @property
-    def text(self):
-        return self._text
+            raise RuntimeError('Error trying to read transition model from file {}'.format(path_to_transition_model))
+        self._phone_table = []
+        for line in open(path_to_phones_table, 'r'):
+            phone, phone_id = line.split(' ')
+            self._phone_table.append(phone)
+        if len(self._phone_table) == 0:
+            raise RuntimeError('Empty phone table read from file {}'.format(path_to_phones_table))
 
     def __del__(self):
-        self._kaldi_lib.DeleteAligner(self._aligner)
+        if self._open:
+            self.close_archive()
+        self._kaldi_lib.DeleteTransitionModel(self._transition_model)
 
-
-class WavAligner(object):
-    def __init__(self, text_fst_compiler, transition_model, acoustic_model, char_codes):
-        self._fst_compiler = text_fst_compiler
-        self._transition_model = transition_model
-        self._acoustic_model = acoustic_model
-        self._phrases = {}
-        self._kaldi_lib = kaldi_lib
-        self._ffi = ffi
-        self._char_codes = char_codes
-        self._ptr_last_err_code = self._ffi.new("int *")
-
-    def add_phrase(self, text, transcription):
-        self._phrases[text] = PhraseMatcher(self._fst_compiler, transcription)
-
-    def align(self, mfcc_features, text, acoustic_scale=1.0, transition_scale=1.0, self_loop_scale=1.0, beam=10, retry_beam=40):
-        alignment = self._kaldi_lib.Align(mfcc_features.handler, self._transition_model.handler, self._acoustic_model.handler, self._phrases[text].handler, acoustic_scale, transition_scale, self_loop_scale, beam, retry_beam, False, self._ptr_last_err_code)
+    def get_alignment(self, record_descriptor):
+        if not self._open:
+            return None
+        self._result_buffer = self._kaldi_lib.ReadAlignment(record_descriptor, self._transition_model, self._alignment_reader, self._ptr_last_err_code)
         err_code = self._ptr_last_err_code[0]
         if err_code != ked.OK:
             print_error(err_code)
-            raise RuntimeError("Error while aligning")
+            raise RuntimeError('Error trying to get alignment for descriptor {}'.format(record_descriptor))
+        alignment_size = self._result_buffer.number_of_phones
+        alignment = []
+        for phone_num in range(alignment_size):
+            phone_id = self._result_buffer.phones[phone_num]
+            phone_length = self._result_buffer.num_repeats_per_phone[phone_num]
+            alignment.append((phone_id, self._phone_table[phone_id], phone_length))
+        self._kaldi_lib.DeleteAlignment(self._result_buffer)
+        self._result_buffer = None
         return alignment
 
-    @property
-    def n_phrases(self):
-        return len(self._phrases)
+    def open_archive(self, path_to_archive):
+        if self._open:
+            self.close_archive()
+        if not os.path.isfile(path_to_archive):
+            raise RuntimeError('Error trying to open archive {}. No such file or directory'.format(path_to_archive))
+        specifier = "ark,s:gunzip -c {}|".format(path_to_archive)
+        self._alignment_reader = self._kaldi_lib.GetAlignmentReader(specifier, self._ptr_last_err_code)
+        self._open = True
+
+    def close_archive(self):
+        if self._open:
+            self._kaldi_lib.DeleteAlignmentReader(self._alignment_reader)
+        self._open = False
 
 
-class Transcriber(object):
-    def __init__(self, word_table, unknown_word_code, phone_table, inv_phone_table, encoding='default'):
-        self._word_table = word_table
-        assert(unknown_word_code in self._word_table)
-        self._unk_code = self._word_table[unknown_word_code]
-        self._code_to_char = phone_table
-        self._char_to_int = inv_phone_table
-        self._encoding = encoding
+class SpeechToTextAligner(object):
+    def __init__(self, asr_model, transition_scale=1.0, acoustic_scale=1.0, self_loop_scale=0.1, beam=10,
+                                  retry_beam=40, careful=False):
+        self._kaldi_lib = kaldi_lib
+        self._ffi = ffi
+        self._asr_model = asr_model
+        self._transition_scale = transition_scale
+        self._acoustic_scale = acoustic_scale
+        self._self_loop_scale = self_loop_scale
+        self._beam = beam
+        self._retry_beam = retry_beam
+        self._careful = careful
 
-    def transcribe(self, phrase):
-        if self._encoding != 'default':
-            phrase = phrase.encode(self._encoding)
-        return [self._word_table[word] if word in self._word_table else self._unk_code for word in phrase.split(' ') ]
-
-
-def load_phones_table(path_to_phones_table):
-    phone_table = []
-    inv_phone_table = {}
-    for line in open(path_to_phones_table, 'r'):
-        phone, phone_id = unicode(line.strip()).split(' ')
-        phone_table.append(phone)
-        inv_phone_table[phone] = phone_id
-    if len(phone_table) == 0:
-        raise RuntimeError('Empty phone table read from file {}'.format(path_to_phones_table))
-    return phone_table, inv_phone_table
-
-
-def load_word_table(path_to_word_table):
-    word_table = {}
-    for line in open(path_to_word_table, 'r'):
-        word_code = line.split(' ')
-        word = word_code[0]
-        code = int(word_code[1])
-        word_table[word] = code
-    return word_table
+    def get_alignment(self, features, fst):
+        pass
 
 
 initialize_cffi()
@@ -174,7 +154,6 @@ if __name__ == '__main__':
     PATH_TO_LEXICAL_FST = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/L.fst'
     PATH_TO_CONTEXT_TREE = KALDI_PATH + RUSPEECH_EXP_PATH + 'exp/tri1/tree'
     PATH_TO_DISAMBIGUATION_SYMBOLS = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/phones/disambig.int'
-    PATH_TO_PHONES_TABLE = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/phones.txt'
     PATH_TO_WORD_TABLE = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/words.txt'
     UNK_CODE = '<UNK>'
     TEST_PHRASE = u'уха обычно готовится из пресноводных рыб'
@@ -182,6 +161,10 @@ if __name__ == '__main__':
     #ASR model
     asr_model = ASR_model(PATH_TO_MODEL)
     # asr_model.boost_silence(1.0)
+
+    #Aligner
+    aligner = SpeechToTextAligner(asr_model, transition_scale=1.0, acoustic_scale=1.0, self_loop_scale=0.1, beam=10,
+                                  retry_beam=40, careful=False)
 
     #Graph Compiler
     fst = KaldiFST(PATH_TO_LEXICAL_FST)
@@ -203,7 +186,13 @@ if __name__ == '__main__':
     #Delta + delta delta features
     delta_feature_matrix = get_delta_features(mfcc_feature_matrix, 2, 2)
 
-    aligner = SpeechToTextAligner(asr_model, transition_scale=1.0, acoustic_scale=1.0, self_loop_scale=0.1, beam=10, retry_beam=40, careful=False)
-    phrase_fst = compile_fst(TEST_PHRASE)
-    alignment = aligner.get_alignment(delta_feature_matrix, phrase_fst)
+    #Transcription
+    word2int = load_word_table(PATH_TO_WORD_TABLE)
+    transcriber = Transcriber(word2int, UNK_CODE, encoding='cp1251')
+    transcription = transcriber.transcribe(TEST_PHRASE)
+
+    #Phrase graph
+    decoder_fst = graph_compiler.compile_phrase_graph(transcription)
+
+    alignment = aligner.get_alignment(delta_feature_matrix, decoder_fst)
 

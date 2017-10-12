@@ -19,20 +19,6 @@ extern "C"
 {
 namespace kaldi_python_readers 
 {
-/* AlignmentReader */
-void *GetAlignmentReader(char *i_specifier
-                      ,  int *o_err_code);
-void DeleteAlignmentReader(void *o_alignment_reader);
-Alignment *ReadAlignment(char *i_key
-                       , void *i_transition_model
-                       , void *i_alignment_reader
-                       , int *o_err_code);
-
-/* ContextTree*/
-void *GetContextTree(char *i_specifier
-                   , int *o_err_code);
-void DeleteContextTree(void *o_context_tree);
-
 /* IntegerVector*/
 int *ReadIntegerVector(char *i_specifier
                      , int *o_n_elements

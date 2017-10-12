@@ -25,21 +25,22 @@ extern "C"
 {
 namespace python_segmentation
 {
-/*Fst compiler to assemble aligner for phrase*/
-void* GetTextFstCompiler(void *i_context_tree
-                       , int *i_disambiguation_symbols
-                       , int i_size_of_disambiguation_symbols
-                       , void *i_transition_model
-                       , char *i_lex_in_filename
-                       , int *o_err_code);
-void DeleteTextFstCompiler(void *o_compiler);
+typedef struct
+{
+    int number_of_phones;
+    int *phones;
+    int *num_repeats_per_phone;
+} Alignment;
 
-/*Fst for the phrase*/
-void *GetAlignerFst(void *i_text_fst_compiler
-                  , int *i_transcript
-                  , int i_transcript_len
-                  , int *o_err_code);
-void DeleteAlignerFst(void *o_aligner_fst);
+/* AlignmentReader */
+void *GetAlignmentReader(char *i_specifier
+                      ,  int *o_err_code);
+void DeleteAlignmentReader(void *o_alignment_reader);
+Alignment *ReadAlignment(char *i_key
+                       , void *i_transition_model
+                       , void *i_alignment_reader
+                       , int *o_err_code);
+
 /* Main function*/
 Alignment *Align(void *i_features
                , void *i_transition_model
