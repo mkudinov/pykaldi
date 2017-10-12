@@ -40,7 +40,10 @@ int *ReadIntegerVector(char *i_specifier
 void DeleteIntegerVector(int *o_vector);
 void CopyIntegerVector(int *i_source
                      , int i_size
-                     , void *o_destination
+                     ,  int *o_destination
+                     , int *o_err_code);
+void *InitIntegerVector(int *i_source
+                     , int i_size
                      , int *o_err_code);
 //from common.h
 void DeleteAlignment(Alignment *o_alignment_buffer);
