@@ -110,6 +110,9 @@ Alignment *Align(void *i_features
                , void *i_transition_model
                , void *i_acoustic_model
                , void *i_aligner_fst
+               , float *o_likelihood
+               , int   *o_n_retries
+               , int   *o_n_frames_ready
                , float i_acoustic_scale
                , float i_transition_scale
                , float i_self_loop_scale
@@ -123,89 +126,63 @@ Alignment *Align(void *i_features
     fst::VectorFst<fst::StdArc> *aligner_fst = static_cast<fst::VectorFst<fst::StdArc>*>(i_aligner_fst);
     kaldi::TransitionModel *transition_model = static_cast<kaldi::TransitionModel *>(i_transition_model); 
     kaldi::AmDiagGmm* acoustic_model = static_cast<kaldi::AmDiagGmm*>(i_acoustic_model);
+    *o_n_retries = 0;
     if (features->NumRows() == 0) 
     {
         KALDI_WARN << "Zero-length utterance";
         *o_err_code = WRONG_INPUT;
         return 0;
     }
-
-   // BaseFloat acoustic_scale = 1.0;
-   // BaseFloat transition_scale = 1.0;
-  //  BaseFloat self_loop_scale = 1.0;
-//TODO: Maybe AddTransitionProbs is not necessary
-    {// Add transition-probs to the FST.
-     std::vector<int32> disambig_syms;  // empty.
-     kaldi::AddTransitionProbs(*transition_model, disambig_syms,
-                             i_transition_scale, i_self_loop_scale,
-                             aligner_fst);
+    {  // Add transition-probs to the FST.
+        std::vector<int32> disambig_syms;  // empty.
+        kaldi::AddTransitionProbs(*transition_model, disambig_syms, i_transition_scale, i_self_loop_scale, aligner_fst);
     }
-    kaldi::DecodableAmDiagGmmScaled gmm_decodable(*acoustic_model, *transition_model, *features,
+    kaldi::DecodableAmDiagGmmScaled decodable(*acoustic_model, *transition_model, *features,
                                                i_acoustic_scale);
-    if ((i_retry_beam != 0 && i_retry_beam <= i_beam) || i_beam <= 0.0) 
-    {
-        KALDI_ERR << "Beams do not make sense: beam " << i_beam
-                                  << ", retry-beam " << i_retry_beam;
-        *o_err_code = KALDI_WRONG_CONFIGURATION;
-        return 0;
-    }
-      
-    if (aligner_fst->Start() == fst::kNoStateId) 
-    {
-        KALDI_WARN << "Empty decoding graph";
-        *o_err_code = WRONG_INPUT;
-        return 0;
-    }
-
     fst::StdArc::Label special_symbol = 0;
-       if (i_careful)
-               kaldi::ModifyGraphForCarefulAlignment(aligner_fst);
-    int num_retried = 0; 
+
+    if (i_careful)
+    {
+        kaldi::ModifyGraphForCarefulAlignment(aligner_fst);
+    }
     kaldi::FasterDecoderOptions decode_opts;
     decode_opts.beam = i_beam;
+
     kaldi::FasterDecoder decoder(*aligner_fst, decode_opts);
-    decoder.Decode(&gmm_decodable);                
+    decoder.Decode(&decodable);
+
     bool ans = decoder.ReachedFinal();  // consider only final states.
-                         
-    if (!ans && i_retry_beam != 0.0) 
+
+    if (!ans && i_retry_beam != 0.0)
     {
-        if (num_retried != 0) num_retried++;
-             KALDI_WARN << "Retrying utterance with beam " << i_retry_beam;
+        (*o_n_retries)++;
+        KALDI_WARN << "Retrying utterance with beam "
+                   << i_retry_beam;
         decode_opts.beam = i_retry_beam;
         decoder.SetOptions(decode_opts);
-        decoder.Decode(&gmm_decodable);
+        decoder.Decode(&decodable);
         ans = decoder.ReachedFinal();
     }
-                          
-    if (!ans) 
-    {  // Still did not reach final state.
-        KALDI_WARN << "Did not successfully decode file, len = "
-                            << gmm_decodable.NumFramesReady();
-        *o_err_code = WRONG_INPUT;
-         return 0;
-    }
-                               
+
     fst::VectorFst<kaldi::LatticeArc> decoded;  // linear FST.
     decoder.GetBestPath(&decoded);
-    if (decoded.NumStates() == 0) 
+    if (decoded.NumStates() == 0)
     {
         KALDI_WARN << "Error getting best path from decoder (likely a bug)";
         *o_err_code = INTERNAL_KALDI_ERROR;
         return 0;
     }
-                                          
+
     std::vector<int32> alignment;
     std::vector<int32> words;
     kaldi::LatticeWeight weight;
-                                               
-    fst::GetLinearSymbolSequence(decoded, &alignment, &words, &weight);
-    //kaldi::BaseFloat like = -(weight.Value1()+weight.Value2()) / i_acoustic_scale;
-    std::vector<std::vector<int32> > split;
+    GetLinearSymbolSequence(decoded, &alignment, &words, &weight);
+    std::vector<vector<int32> > split;
     kaldi::SplitToPhones(*transition_model, alignment, &split);
     Alignment *result = CreateAlignmentBuffer(split.size(), o_err_code);
     if(*o_err_code != OK)
         return 0;
-    try 
+    try
     {
         for(size_t i = 0; i < result->number_of_phones; ++i)
         {
@@ -220,6 +197,8 @@ Alignment *Align(void *i_features
         *o_err_code = INTERNAL_KALDI_ERROR;
         return 0;
     }
+    *o_likelihood = -(weight.Value1()+weight.Value2()) / i_acoustic_scale;
+    *o_n_frames_ready = decodable.NumFramesReady();
     return result;
 }
 

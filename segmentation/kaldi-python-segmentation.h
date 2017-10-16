@@ -18,6 +18,7 @@
 #include "../gmm/am-diag-gmm.h"
 #include "../hmm/hmm-utils.h"
 #include "../gmm/decodable-am-diag-gmm.h"
+#include "../fstext/fstext-utils.h"
 using namespace kaldi_python_common_errors;
 
 extern "C"
@@ -45,6 +46,9 @@ Alignment *Align(void *i_features
                , void *i_transition_model
                , void *i_acoustic_model
                , void *i_aligner_fst
+               , float *o_likelihood
+               , int   *o_n_retries
+               , int   *o_n_frames_ready
                , float i_acoustic_scale
                , float i_transition_scale
                , float i_self_loop_scale
@@ -52,6 +56,8 @@ Alignment *Align(void *i_features
                , float i_retry_beam
                , bool i_careful
                , int *o_err_code);
+
+void DeleteAlignment(Alignment *o_alignment_buffer);
 } //namespace python_segmantation
 } //extern "C"
 #endif

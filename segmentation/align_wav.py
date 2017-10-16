@@ -48,6 +48,9 @@ def initialize_cffi():
                    , void *i_transition_model
                    , void *i_acoustic_model
                    , void *i_aligner_fst
+                   , float *o_likelihood
+                   , int   *o_n_retries
+                   , int   *o_n_frames_ready
                    , float i_acoustic_scale
                    , float i_transition_scale
                    , float i_self_loop_scale
@@ -55,6 +58,8 @@ def initialize_cffi():
                    , float i_retry_beam
                    , bool i_careful
                    , int *o_err_code);
+
+    void DeleteAlignment(Alignment *o_alignment_buffer);
     """
     global ffi
     global kaldi_lib
@@ -135,14 +140,22 @@ class SpeechToTextAligner(object):
 
     def get_alignment(self, features, fst):
         ptr_last_err_code = self._ffi.new("int*")
-        result_buffer = self._kaldi_lib.Align(features.handle, self._asr_model.acoustic_model_handle,
-                                       self._asr_model.transition_model_handle, fst.handle, self._acoustic_scale,
+        ptr_likelihood = self._ffi.new("float*")
+        ptr_n_retries = self._ffi.new("int*")
+        ptr_n_frames = self._ffi.new("int*")
+        result_buffer = self._kaldi_lib.Align(features.handle, self._asr_model.transition_model_handle,
+                                       self._asr_model.acoustic_model_handle, fst.handle,
+                                       ptr_likelihood, ptr_n_retries, ptr_n_frames,
+                                       self._acoustic_scale,
                                        self._transition_scale, self._self_loop_scale, self._beam, self._retry_beam,
                                        self._careful, ptr_last_err_code)
         err_code = ptr_last_err_code[0]
         if err_code != ked.OK:
             print_error(err_code)
             raise RuntimeError('Error trying to make alignment')
+        likelihood = ptr_likelihood[0]
+        n_retries = ptr_n_retries[0]
+        n_frames = ptr_n_frames[0]
         alignment_size = result_buffer.number_of_phones
         alignment = []
         for phone_num in range(alignment_size):
@@ -150,7 +163,7 @@ class SpeechToTextAligner(object):
             phone_length = result_buffer.num_repeats_per_phone[phone_num]
             alignment.append((phone_id, self._phone_table[phone_id], phone_length))
         self._kaldi_lib.DeleteAlignment(result_buffer)
-        return  alignment
+        return  alignment, likelihood, n_retries, n_frames
 
 
 initialize_cffi()
@@ -209,7 +222,8 @@ if __name__ == '__main__':
 
     #Phrase graph
     decoder_fst = graph_compiler.compile_phrase_graph(transcription)
-    alignment = aligner.get_alignment(delta_feature_matrix, decoder_fst)
+    print decoder_fst
+    alignment, likelihood, _, _ = aligner.get_alignment(delta_feature_matrix, decoder_fst)
     print alignment
 
     #alignment_reader = KaldiAlignmentReader(PATH_TO_TRANSITION_MODEL, PATH_TO_PHONES_TABLE)
