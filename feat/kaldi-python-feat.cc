@@ -6,7 +6,7 @@ namespace kaldi_python_asr_model
 {
 kaldi::RandomAccessBaseFloatMatrixReader* getFeatureReaderFloat(char *i_specifier, int *o_err_code)
 {
-    *o_err_code = OK
+    *o_err_code = OK;
     kaldi::RandomAccessBaseFloatMatrixReader* feature_reader = new kaldi::RandomAccessBaseFloatMatrixReader(i_specifier);
     feature_reader->HasKey("abc");
     return feature_reader;

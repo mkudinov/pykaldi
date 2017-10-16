@@ -48,5 +48,37 @@ int GetNumberOfArcs(void *i_fst, int *o_err_code)
     }
     return number_of_arcs;
 }
+
+void *GetFstReader(char *i_specifier, int *o_err_code)
+{
+    *o_err_code = OK;
+    kaldi::RandomAccessTableReader<fst::VectorFstHolder> *fst_reader = new kaldi::RandomAccessTableReader<fst::VectorFstHolder> (i_specifier);
+    fst_reader->HasKey("abc");
+    return fst_reader;
+}
+
+void *ReadFst(char *i_key, void *i_fst_reader, int *o_err_code)
+{
+    *o_err_code = OK;
+    kaldi::RandomAccessTableReader<fst::VectorFstHolder> *fst_reader = static_cast<kaldi::RandomAccessTableReader<fst::VectorFstHolder> *>(i_fst_reader);
+    std::string key(i_key);
+    if(!fst_reader->HasKey(key))
+    {
+        *o_err_code = NO_KEY;
+        return 0;
+    }
+    fst::VectorFst<fst::StdArc> *fst = new fst::VectorFst<fst::StdArc>();
+    *fst = fst_reader->Value(key);
+    return fst;
+}
+
+void DeleteFstReader(void* o_fst_reader)
+{
+    if(o_fst_reader)
+    {
+        delete static_cast<kaldi::RandomAccessTableReader<fst::VectorFstHolder> *>(o_fst_reader);
+    }
+}
+
 } //namespace kaldi_python_fst
 } //extern "C"
