@@ -60,5 +60,5 @@ if __name__ == '__main__':
     print ""
     print cmvn_matrix.numpy_array()
     print ""
-    cmvn_transform(cmvn_matrix, feature_matrix, True)
+    cmvn_transform(cmvn_matrix, feature_matrix, False)
     print feature_matrix.numpy_array()

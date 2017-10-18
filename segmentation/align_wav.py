@@ -13,7 +13,7 @@ from common.constants import KALDI_ERR_CODES as ked
 from common.constants import print_error as print_error
 from utilities.utilities import KaldiIntegerVector
 from asr_model.asr_model import ASR_model
-from fst.fst import KaldiFST
+from fst.fst import KaldiFST, KaldiFstReader
 from tree.tree import ContextDependency
 from decoder.training_graph_compiler import TrainingGraphCompiler
 from feat.feat import KaldiFeatureReader, KaldiMatrix, get_delta_features
@@ -185,6 +185,7 @@ if __name__ == '__main__':
     TEST_PHRASE = u'уха обычно готовится из пресноводных рыб'
     ALIGNS_PATH = 'exp/tri1/ali.1.gz'
     PATH_TO_PHONES_TABLE = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/phones.txt'
+    PATH_TO_FST_ARCHIVE = KALDI_PATH + RUSPEECH_EXP_PATH + 'exp/tri1/fsts.1'
 
     #ASR model
     asr_model = ASR_model(PATH_TO_MODEL)
@@ -210,7 +211,7 @@ if __name__ == '__main__':
     #CMVN transform
     feature_matrix_reader.open_archive(PATH_TO_CMVN_ARCHIVE, np.float64)
     cmvn_matrix = feature_matrix_reader.get_matrix(CMVN_CODE)
-    cmvn_transform(cmvn_matrix, mfcc_feature_matrix, True)
+    cmvn_transform(cmvn_matrix, mfcc_feature_matrix, False)
 
     #Delta + delta delta features
     delta_feature_matrix = get_delta_features(mfcc_feature_matrix, 2, 2)
@@ -222,7 +223,6 @@ if __name__ == '__main__':
 
     #Phrase graph
     decoder_fst = graph_compiler.compile_phrase_graph(transcription)
-    print decoder_fst
     alignment, likelihood, _, _ = aligner.get_alignment(delta_feature_matrix, decoder_fst)
     print alignment
 
