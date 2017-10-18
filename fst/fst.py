@@ -86,12 +86,15 @@ class KaldiFstReader(object):
         fst = KaldiFST(fst_handle=result_ptr)
         return fst
 
-    def open_archive(self, path_to_archive):
+    def open_archive(self, path_to_archive, format=None):
         if self._open:
             self.close_archive()
         if not os.path.isfile(path_to_archive):
             raise RuntimeError('Error trying to open archive {}. No such file or directory'.format(path_to_archive))
-        specifier = "ark:{}".format(path_to_archive)
+        if format == 'gzip':
+            specifier = "ark,s:gunzip -c {}|".format(path_to_archive)
+        else:
+            specifier = "ark:{}".format(path_to_archive)
         self._fst_reader = self._kaldi_lib.GetFstReader(specifier, self._ptr_last_err_code)
         err_code = self._ptr_last_err_code[0]
         if err_code != ked.OK:

@@ -73,23 +73,18 @@ def initialize_cffi():
 
 
 class KaldiAlignmentReader(object):
-    def __init__(self, path_to_transition_model, phone_table):
+    def __init__(self, asr_model, phone_table):
         self._kaldi_lib = kaldi_lib
         self._ffi = ffi
         self._ptr_last_err_code = self._ffi.new("int*")
         self._open = False
         self._result_buffer = None
-        self._transition_model = self._kaldi_lib.GetTransitionModel(path_to_transition_model, self._ptr_last_err_code)
-        err_code = self._ptr_last_err_code[0]
-        if err_code != ked.OK:
-            print_error(err_code)
-            raise RuntimeError('Error trying to read transition model from file {}'.format(path_to_transition_model))
+        self._transition_model = asr_model.transition_model_handle
         self._phone_table = phone_table
 
     def __del__(self):
         if self._open:
             self.close_archive()
-        self._kaldi_lib.DeleteTransitionModel(self._transition_model)
 
     def get_alignment(self, record_descriptor):
         if not self._open:
@@ -109,12 +104,15 @@ class KaldiAlignmentReader(object):
         self._result_buffer = None
         return alignment
 
-    def open_archive(self, path_to_archive):
+    def open_archive(self, path_to_archive, format=None):
         if self._open:
             self.close_archive()
         if not os.path.isfile(path_to_archive):
             raise RuntimeError('Error trying to open archive {}. No such file or directory'.format(path_to_archive))
-        specifier = "ark,s:gunzip -c {}|".format(path_to_archive)
+        if format == 'gzip':
+            specifier = "ark,s:gunzip -c {}|".format(path_to_archive)
+        else:
+            specifier = "ark:{}".format(path_to_archive)
         self._alignment_reader = self._kaldi_lib.GetAlignmentReader(specifier, self._ptr_last_err_code)
         self._open = True
 
@@ -185,7 +183,6 @@ if __name__ == '__main__':
     TEST_PHRASE = u'уха обычно готовится из пресноводных рыб'
     ALIGNS_PATH = 'exp/tri1/ali.1.gz'
     PATH_TO_PHONES_TABLE = KALDI_PATH + RUSPEECH_EXP_PATH + 'data/lang/phones.txt'
-    PATH_TO_FST_ARCHIVE = KALDI_PATH + RUSPEECH_EXP_PATH + 'exp/tri1/fsts.1'
 
     #ASR model
     asr_model = ASR_model(PATH_TO_MODEL)
@@ -223,12 +220,16 @@ if __name__ == '__main__':
 
     #Phrase graph
     decoder_fst = graph_compiler.compile_phrase_graph(transcription)
+
+    #align!
     alignment, likelihood, _, _ = aligner.get_alignment(delta_feature_matrix, decoder_fst)
     print alignment
 
-    #alignment_reader = KaldiAlignmentReader(PATH_TO_TRANSITION_MODEL, PATH_TO_PHONES_TABLE)
-    #path_to_archive = KALDI_PATH + RUSPEECH_EXP_PATH + ALIGNS_PATH
-    #alignment_reader.open_archive(path_to_archive)
-    #alignment = alignment_reader.get_alignment("TRAIN-FCT018-018R0070")
-    #print alignment
+    #read the same alignment from the archive
+    alignment_reader = KaldiAlignmentReader(asr_model, phone_table)
+    path_to_archive = KALDI_PATH + RUSPEECH_EXP_PATH + ALIGNS_PATH
+    print path_to_archive
+    alignment_reader.open_archive(path_to_archive, format='gzip')
+    alignment = alignment_reader.get_alignment(FILE_CODE)
+    print alignment
 
