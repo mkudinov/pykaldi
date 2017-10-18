@@ -90,7 +90,6 @@ class KaldiFeatureReader(object):
         self._ptr_return_by_reference1 = self._ffi.new("int *")
         self._ptr_return_by_reference2 = self._ffi.new("int *")
         self._open = False
-        self._kaldi_matrices = []
         self._dtype = None
 
     def __del__(self):
@@ -106,7 +105,6 @@ class KaldiFeatureReader(object):
         num_rows = self._ptr_return_by_reference1[0]
         num_columns = self._ptr_return_by_reference2[0]
         feature_matrix = KaldiMatrix(result_ptr, [num_rows, num_columns], dtype=np.dtype(self._dtype))
-        self._kaldi_matrices.append(feature_matrix)
         return feature_matrix
 
     def open_archive(self, path_to_archive, dtype):
