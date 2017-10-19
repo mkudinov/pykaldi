@@ -19,6 +19,7 @@ namespace kaldi_python_fst
     void DeleteFst(void *o_fst);
     void *GetFstReader(char *i_specifier, int *o_err_code);
     void *ReadFst(char *i_key, void *i_fst_reader, int *o_err_code);
+    void WriteFst(void *i_fst, char *i_filename, int *o_err_code);
     void DeleteFstReader(void* o_fst_reader);
 } //namespace kaldi_python_fst
 } //extern "C"

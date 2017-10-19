@@ -23,6 +23,7 @@ def initialize_cffi():
     void DeleteFst(void *o_fst);
     void *GetFstReader(char *i_specifier, int *o_err_code);
     void *ReadFst(char *i_key, void *i_fst_reader, int *o_err_code);
+    void WriteFst(void *i_fst, char *i_filename, int *o_err_code);
     void DeleteFstReader(void* o_fst_reader);
     """
     global ffi
@@ -61,6 +62,13 @@ class KaldiFST(object):
     def __str__(self):
         return "FST: %s arcs" % (self.n_arcs)
 
+    def dump_to_file(self, filename):
+        ptr_last_err_code = ffi.new("int *")
+        self.kaldi_lib.WriteFst(self._ptr_fst, filename, ptr_last_err_code)
+        err_code = ptr_last_err_code[0]
+        if err_code != ked.OK:
+            raise RuntimeError('Error trying to save fst in a file {}' % filename)
+
     @property
     def handle(self):
         return self._ptr_fst
@@ -92,7 +100,7 @@ class KaldiFstReader(object):
         if not os.path.isfile(path_to_archive):
             raise RuntimeError('Error trying to open archive {}. No such file or directory'.format(path_to_archive))
         if format == 'gzip':
-            specifier = "ark,s:gunzip -c {}|".format(path_to_archive)
+            specifier = "ark:gunzip -c {}|".format(path_to_archive)
         else:
             specifier = "ark:{}".format(path_to_archive)
         self._fst_reader = self._kaldi_lib.GetFstReader(specifier, self._ptr_last_err_code)

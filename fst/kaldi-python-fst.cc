@@ -49,6 +49,13 @@ int GetNumberOfArcs(void *i_fst, int *o_err_code)
     return number_of_arcs;
 }
 
+void WriteFst(void *i_fst, char *i_filename, int *o_err_code)
+{
+    *o_err_code = OK;
+    fst::VectorFst<fst::StdArc> *fst = static_cast<fst::VectorFst<fst::StdArc>*>(i_fst);
+    fst->Write(i_filename);
+}
+
 void *GetFstReader(char *i_specifier, int *o_err_code)
 {
     *o_err_code = OK;
