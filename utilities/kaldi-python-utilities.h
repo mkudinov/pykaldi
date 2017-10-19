@@ -18,6 +18,9 @@ extern "C"
 namespace kaldi_python_readers 
 {
 /* IntegerVector*/
+void *InitIntegerVector(int *i_source
+                     , int i_size
+                     , int *o_err_code);
 int *ReadIntegerVector(char *i_specifier
                      , int *o_n_elements
                      , int *o_err_code);
@@ -26,9 +29,25 @@ void CopyIntegerVector(int *i_source
                      , int i_size
                      ,  int *o_destination
                      , int *o_err_code);
-void *InitIntegerVector(int *i_source
-                     , int i_size
-                     , int *o_err_code);
+/* Kaldi Matrix */
+void *initMatrixFloat(void *i_source
+                    , int i_nRows
+                    , int i_nColumns
+                    , int *o_err_code);
+void *GetMatrixReader(char *i_specifier, char *i_data_type, int *o_err_code);
+void DeleteMatrixReader(void *o_matrix_reader, char *i_data_type);
+const void* ReadMatrix(char* i_key
+                             , void *i_matrix_reader
+                             , char* i_data_type
+                             , int* o_n_rows
+                             , int* o_n_columns
+                             , int *o_err_code);
+void DeleteMatrix(void *o_matrix
+                       , char* i_data_type);
+void CopyMatrix(void *i_source
+              , void *o_destination
+              , char* i_data_type
+              , int *o_err_code);
 } //namespace kaldi_python_readers
 } //extern "C"
 #endif
