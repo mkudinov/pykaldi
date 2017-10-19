@@ -1,8 +1,6 @@
 #include "kaldi-python-utilities.h"
 #include "../hmm/hmm-utils.h"
 #include <iostream>
-extern "C"
-{
 namespace kaldi_python_readers 
 {
 int *ReadIntegerVector(char *i_specifier, int *o_n_elements, int *o_err_code)
@@ -114,31 +112,18 @@ void DeleteMatrixReader(void *o_matrix_reader, char *i_data_type)
     o_matrix_reader = 0;
 }
 
-const void* readMatrixFloat(char* i_key, void *i_matrix_reader, int* o_n_rows, int* o_n_columns, int *o_err_code)
+template<typename T>
+const void* readMatrix(char* i_key, void *i_matrix_reader, int* o_n_rows, int* o_n_columns, int *o_err_code)
 {
-    kaldi::RandomAccessBaseFloatMatrixReader* matrix_reader = static_cast<kaldi::RandomAccessBaseFloatMatrixReader*>(i_matrix_reader);
+    kaldi::RandomAccessTableReader<kaldi::KaldiObjectHolder<kaldi::Matrix<T> > > * matrix_reader =
+           static_cast<kaldi::RandomAccessTableReader<kaldi::KaldiObjectHolder<kaldi::Matrix<T> > > *>(i_matrix_reader);
     std::string key(i_key);
     if(!matrix_reader->HasKey(key))
     {
         *o_err_code = NO_KEY;
         return 0;
     }
-    const kaldi::Matrix<float>* matrix = new kaldi::Matrix<float>(matrix_reader->Value(key));
-    *o_n_rows = matrix->NumRows();
-    *o_n_columns = matrix->NumCols();
-    return matrix;
-}
-
-const void* readMatrixDouble(char* i_key, void *i_matrix_reader, int* o_n_rows, int* o_n_columns, int *o_err_code)
-{
-    kaldi::RandomAccessDoubleMatrixReader* matrix_reader = static_cast<kaldi::RandomAccessDoubleMatrixReader*>(i_matrix_reader);
-    std::string key(i_key);
-    if(!matrix_reader->HasKey(key))
-    {
-        *o_err_code = NO_KEY;
-        return 0;
-    }
-    const kaldi::Matrix<double>* matrix = new kaldi::Matrix<double>(matrix_reader->Value(key));
+    const kaldi::Matrix<T>* matrix = new kaldi::Matrix<T>(matrix_reader->Value(key));
     *o_n_rows = matrix->NumRows();
     *o_n_columns = matrix->NumCols();
     return matrix;
@@ -154,11 +139,11 @@ const void* ReadMatrix(char* i_key, void *i_matrix_reader, char* i_data_type, in
     }
     if (!strcmp(i_data_type, numpy_constants::NP_FLOAT_32))
     {
-        return readMatrixFloat(i_key, i_matrix_reader, o_n_rows, o_n_columns, o_err_code);
+        return readMatrix<float>(i_key, i_matrix_reader, o_n_rows, o_n_columns, o_err_code);
     }
     else if(!strcmp(i_data_type, numpy_constants::NP_FLOAT_64))
     {
-        return readMatrixDouble(i_key, i_matrix_reader, o_n_rows, o_n_columns, o_err_code);
+        return readMatrix<double>(i_key, i_matrix_reader, o_n_rows, o_n_columns, o_err_code);
     }
 
     *o_err_code = WRONG_INPUT;
@@ -182,36 +167,18 @@ void DeleteMatrix(void *o_matrix, char* i_data_type)
     o_matrix = 0;
 }
 
-void copyMatrixFloat(void *i_source, void *o_destination, int *o_err_code)
+template<typename T>
+void copyMatrix(void *i_source, void *o_destination, int *o_err_code)
 {
     *o_err_code = OK;
     try
     {
-        const kaldi::Matrix<float>* source = static_cast<const kaldi::Matrix<float>*>(i_source);
+        const kaldi::Matrix<T>* source = static_cast<const kaldi::Matrix<T>*>(i_source);
         int nRows = source->NumRows();
         int nColumns = source->NumCols();
         for(int i = 0; i < nRows; i++)
         {
-            std::memcpy(static_cast<float*>(o_destination) + i * nColumns, source->RowData(i), nColumns * sizeof(float));
-        }
-    }
-    catch(...)
-    {
-        *o_err_code = COPY_ERROR;
-    }
-}
-
-void copyMatrixDouble(void *i_source, void *o_destination, int *o_err_code)
-{
-    *o_err_code = OK;
-    try
-    {
-        const kaldi::Matrix<double>* source = static_cast<const kaldi::Matrix<double>*>(i_source);
-        int nRows = source->NumRows();
-        int nColumns = source->NumCols();
-        for(int i = 0; i < nRows; i++)
-        {
-            std::memcpy(static_cast<double*>(o_destination) + i * nColumns, source->RowData(i), nColumns * sizeof(double));
+            std::memcpy(static_cast<T*>(o_destination) + i * nColumns, source->RowData(i), nColumns * sizeof(T));
         }
     }
     catch(...)
@@ -227,11 +194,11 @@ void CopyMatrix(void *i_source, void *o_destination, char *i_data_type, int *o_e
     {
         if (!strcmp(i_data_type, numpy_constants::NP_FLOAT_32))
         {
-            copyMatrixFloat(i_source, o_destination, o_err_code);
+            copyMatrix<float>(i_source, o_destination, o_err_code);
         }
         else if(!strcmp(i_data_type, numpy_constants::NP_FLOAT_64))
         {
-            copyMatrixDouble(i_source, o_destination, o_err_code);
+            copyMatrix<double>(i_source, o_destination, o_err_code);
         }
         else
         {
@@ -244,34 +211,16 @@ void CopyMatrix(void *i_source, void *o_destination, char *i_data_type, int *o_e
     }
 }
 
-void *initMatrixFloat(void *i_source, int i_nRows, int i_nColumns, int *o_err_code)
+template<typename T>
+void *initMatrix(void *i_source, int i_nRows, int i_nColumns, int *o_err_code)
 {
     *o_err_code = OK;
     try
     {
-        kaldi::Matrix<float>* result = new kaldi::Matrix<float>(i_nRows, i_nColumns);
+        kaldi::Matrix<T>* result = new kaldi::Matrix<T>(i_nRows, i_nColumns);
         for(int i = 0; i < i_nRows; i++)
         {
-            std::memcpy(result->RowData(i), static_cast<float*>(i_source) + i * i_nColumns, i_nColumns * sizeof(float));
-        }
-        return result;
-    }
-    catch(...)
-    {
-        *o_err_code = COPY_ERROR;
-    }
-    return 0;
-}
-
-void *initMatrixDouble(void *i_source, int i_nRows, int i_nColumns, int *o_err_code)
-{
-    *o_err_code = OK;
-    try
-    {
-        kaldi::Matrix<double>* result = new kaldi::Matrix<double>(i_nRows, i_nColumns);
-        for(int i = 0; i < i_nRows; i++)
-        {
-            std::memcpy(result->RowData(i), static_cast<double*>(i_source) + i * i_nColumns, i_nColumns * sizeof(double));
+            std::memcpy(result->RowData(i), static_cast<T*>(i_source) + i * i_nColumns, i_nColumns * sizeof(T));
         }
         return result;
     }
@@ -289,11 +238,11 @@ void *InitMatrix(void *i_source, int i_nRows, int i_nColumns, char *i_data_type,
     {
         if (!strcmp(i_data_type, numpy_constants::NP_FLOAT_32))
         {
-            return initMatrixFloat(i_source, i_nRows, i_nColumns, o_err_code);
+            return initMatrix<float>(i_source, i_nRows, i_nColumns, o_err_code);
         }
         else if(!strcmp(i_data_type, numpy_constants::NP_FLOAT_64))
         {
-            return initMatrixDouble(i_source, i_nRows, i_nColumns, o_err_code);
+            return initMatrix<double>(i_source, i_nRows, i_nColumns, o_err_code);
         }
         else
         {
@@ -306,5 +255,4 @@ void *InitMatrix(void *i_source, int i_nRows, int i_nColumns, char *i_data_type,
     }
     return 0;
 }
-} //namespace kaldi_python_readers 
-} //extern "C"
+} //namespace kaldi_python_readers
