@@ -10,7 +10,7 @@ import sys
 
 from common.constants import KALDI_ERR_CODES as ked
 from common.constants import print_error as print_error
-import feat.feat as features
+from utilities.utilities import KaldiMatrixReader
 
 ffi = None
 kaldi_lib = None
@@ -49,13 +49,13 @@ if __name__ == '__main__':
     FILE_CODE = "TRAIN-FCT002-002B0181"
     CMVN_STATS_PATH = "mfcc/cmvn_train.ark"
     CMVN_CODE = "FCT002"
-    feature_matrix_reader = features.KaldiFeatureReader()
+    matrix_reader = KaldiMatrixReader()
     path_to_feature_archive = KALDI_PATH + RUSPEECH_EXP_PATH + FEATURE_PATH
     path_to_cmvn_archive = KALDI_PATH + RUSPEECH_EXP_PATH + CMVN_STATS_PATH
-    feature_matrix_reader.open_archive(path_to_feature_archive, np.float32)
-    feature_matrix = feature_matrix_reader.get_matrix(FILE_CODE)
-    feature_matrix_reader.open_archive(path_to_cmvn_archive, np.float64)
-    cmvn_matrix = feature_matrix_reader.get_matrix(CMVN_CODE)
+    matrix_reader.open_archive(path_to_feature_archive, np.float32)
+    feature_matrix = matrix_reader.get_matrix(FILE_CODE)
+    matrix_reader.open_archive(path_to_cmvn_archive, np.float64)
+    cmvn_matrix = matrix_reader.get_matrix(CMVN_CODE)
     print feature_matrix.numpy_array()
     print ""
     print cmvn_matrix.numpy_array()

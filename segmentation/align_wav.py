@@ -11,12 +11,12 @@ import sys
 
 from common.constants import KALDI_ERR_CODES as ked
 from common.constants import print_error as print_error
-from utilities.utilities import KaldiIntegerVector
+from utilities.utilities import KaldiIntegerVector, KaldiMatrixReader, KaldiMatrix
 from asr_model.asr_model import ASR_model
 from fst.fst import KaldiFST, KaldiFstReader
 from tree.tree import ContextDependency
 from decoder.training_graph_compiler import TrainingGraphCompiler
-from feat.feat import KaldiFeatureReader, KaldiMatrix, get_delta_features
+from feat.feat import get_delta_features
 from transform.transform import cmvn_transform
 from transcriber.transcriber import Transcriber, load_word_table, load_phone_table
 
@@ -201,13 +201,13 @@ if __name__ == '__main__':
     graph_compiler = TrainingGraphCompiler(asr_model, context_dependency, fst, disambiguation_symbols)
 
     #Reading MFCC features
-    feature_matrix_reader = KaldiFeatureReader()
-    feature_matrix_reader.open_archive(PATH_FO_FEATURE_ARCHIVE, np.float32)
-    mfcc_feature_matrix = feature_matrix_reader.get_matrix(FILE_CODE)
+    matrix_reader = KaldiMatrixReader()
+    matrix_reader.open_archive(PATH_FO_FEATURE_ARCHIVE, np.float32)
+    mfcc_feature_matrix = matrix_reader.get_matrix(FILE_CODE)
 
     #CMVN transform
-    feature_matrix_reader.open_archive(PATH_TO_CMVN_ARCHIVE, np.float64)
-    cmvn_matrix = feature_matrix_reader.get_matrix(CMVN_CODE)
+    matrix_reader.open_archive(PATH_TO_CMVN_ARCHIVE, np.float64)
+    cmvn_matrix = matrix_reader.get_matrix(CMVN_CODE)
     cmvn_transform(cmvn_matrix, mfcc_feature_matrix, False)
 
     #Delta + delta delta features
