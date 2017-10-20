@@ -30,9 +30,10 @@ void CopyIntegerVector(int *i_source
                      ,  int *o_destination
                      , int *o_err_code);
 /* Kaldi Matrix */
-void *initMatrixFloat(void *i_source
+void *InitMatrix(void *i_source
                     , int i_nRows
                     , int i_nColumns
+                    , char* i_data_type
                     , int *o_err_code);
 void *GetMatrixReader(char *i_specifier, char *i_data_type, int *o_err_code);
 void DeleteMatrixReader(void *o_matrix_reader, char *i_data_type);

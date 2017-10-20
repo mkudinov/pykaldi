@@ -31,9 +31,10 @@ def initialize_cffi():
                          ,  int *o_destination
                          , int *o_err_code);
     /* Kaldi Matrix */
-    void *initMatrixFloat(void *i_source
+    void *InitMatrix(void *i_source
                         , int i_nRows
                         , int i_nColumns
+                        , char* i_data_type
                         , int *o_err_code);
     void *GetMatrixReader(char *i_specifier, char *i_data_type, int *o_err_code);
     void DeleteMatrixReader(void *o_matrix_reader, char *i_data_type);
@@ -117,17 +118,39 @@ class KaldiIntegerVector(object):
 
 
 class KaldiMatrix(object):
-    def __init__(self, ptr_to_matrix, shape, dtype):
+    def __init__(self, ptr_to_matrix=None, shape=None, dtype=None, numpy_matrix=None):
         self._kaldi_lib = kaldi_lib
         self._ffi = ffi
-        self._ptr_to_matrix = ptr_to_matrix
-        self.shape = shape
-        self.valid = True
         self._ptr_last_err_code = self._ffi.new("int *")
-        self._dtype = np.dtype(dtype).name
+        if ptr_to_matrix is not None:
+            self._initialize_from_ptr(ptr_to_matrix, shape, dtype)
+        elif numpy_matrix is not None:
+            self._initialize_from_numpy_array(numpy_matrix)
+        else:
+            raise RuntimeError("Wrong parameters in KaldiMatrix initialization")
 
     def __del__(self):
         self._kaldi_lib.DeleteMatrix(self._ptr_to_matrix, self._dtype)
+
+    def _initialize_from_ptr(self, ptr_to_matrix, shape, dtype):
+        self._ptr_to_matrix = ptr_to_matrix
+        self.shape = shape
+        self.valid = True
+        self._dtype = np.dtype(dtype).name
+
+    def _initialize_from_numpy_array(self, numpy_matrix):
+        if len(numpy_matrix.shape) > 1:
+            self.shape = numpy_matrix.shape
+        else:
+            self.shape = (1, numpy_matrix.shape[0])
+        self.valid = True
+        self._dtype = numpy_matrix.dtype.name
+        self._ptr_to_matrix = self._kaldi_lib.InitMatrix(self._ffi.cast('void *', numpy_matrix.__array_interface__['data'][0]),
+                                                         self.shape[0], self.shape[1], self._dtype, self._ptr_last_err_code)
+        err_code = self._ptr_last_err_code[0]
+        if err_code != ked.OK:
+            print_error(err_code)
+            raise RuntimeError('Error trying to init Kaldi matrix')
 
     @property
     def handle(self):
@@ -144,6 +167,10 @@ class KaldiMatrix(object):
         self._kaldi_lib.CopyMatrix(self._ptr_to_matrix,
                                           self._ffi.cast('void *', numpy_matrix.__array_interface__['data'][0]),
                                           self._dtype, self._ptr_last_err_code)
+        err_code = self._ptr_last_err_code[0]
+        if err_code != ked.OK:
+            print_error(err_code)
+            raise RuntimeError('Error trying to copy from Kaldi matrix')
         return numpy_matrix
 
 
@@ -215,3 +242,6 @@ if __name__ == '__main__':
     feature_matrix_reader.open_archive(path_to_feature_archive, np.float32)
     feature_matrix = feature_matrix_reader.get_matrix(FILE_CODE)
     print feature_matrix.numpy_array()
+    matrix_initializer = np.array([[0,1,2], [1,2,3]], dtype=np.float32)
+    kaldi_matrix = KaldiMatrix(numpy_matrix=matrix_initializer)
+    print kaldi_matrix.numpy_array()
