@@ -129,4 +129,13 @@ void *ComputeMfcc(void *i_waveform
     return features;
 }
 
+void DeleteMfccComputer(void *o_mfcc_computer)
+{
+    if(o_mfcc_computer)
+    {
+        delete static_cast<kaldi::Mfcc *>(o_mfcc_computer);
+    }
+    o_mfcc_computer = 0;
+}
+
 } //namespace kaldi_python_feat

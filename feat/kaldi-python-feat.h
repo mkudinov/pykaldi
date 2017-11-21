@@ -55,6 +55,8 @@ void *GetMfccComputer(float i_frame_length_ms
                     , float i_high_freq
                     , float i_low_freq
                     , int *o_err_code);
+
+void DeleteMfccComputer(void *o_mfcc_computer);
 } //namespace kaldi_python_feat
 } //extern "C"
 #endif
