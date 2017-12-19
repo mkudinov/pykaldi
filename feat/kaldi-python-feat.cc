@@ -34,6 +34,7 @@ void *GetWavData(void *io_matrix_wav_data, int i_sampling_rate, int *o_err_code)
     *o_err_code = OK;
     kaldi::Matrix<float>* mat_wav_data = static_cast<kaldi::Matrix<float>* >(io_matrix_wav_data);
     kaldi::WaveData* wav_data = new kaldi::WaveData(static_cast<float>(i_sampling_rate), *mat_wav_data);
+    io_matrix_wav_data = 0;
     return wav_data;
 }
 
@@ -50,18 +51,18 @@ void *GetMfccComputer(float i_frame_length_ms
                     , float i_frame_shift_ms
                     , float i_sampling_rate
 
-                    , int i_n_mel_banks
-                    , int i_n_cepstral_coefficients
-
                     , float i_dither_scale
                     , float i_preemph_coeff
-                    , bool i_remove_dc_offset
+                    , bool  i_remove_dc_offset
+
+                    , int i_n_mel_banks
+                    , float i_high_freq
+                    , float i_low_freq
 
                     , bool i_use_energy
                     , bool i_raw_energy
+                    , int i_n_cepstral_coefficients
                     , float i_cepstral_lifter_coefficient
-                    , float i_high_freq
-                    , float i_low_freq
                     , int *o_err_code)
 {
     *o_err_code = OK;
@@ -136,6 +137,99 @@ void DeleteMfccComputer(void *o_mfcc_computer)
         delete static_cast<kaldi::Mfcc *>(o_mfcc_computer);
     }
     o_mfcc_computer = 0;
+}
+
+void *GetFbankFeaturesComputer( float i_frame_length_ms
+                              , float i_frame_shift_ms
+                              , float i_sampling_rate
+
+                              , float i_dither_scale
+                              , float i_preemph_coeff
+                              , bool i_remove_dc_offset
+
+                              , int i_n_mel_banks
+                              , float i_high_freq
+                              , float i_low_freq
+
+                              , bool i_use_energy
+                              , bool i_raw_energy
+                              , bool i_use_log_fbank
+                              , bool i_use_power
+                              , int *o_err_code)
+{
+    *o_err_code = OK;
+    kaldi::FbankOptions fbank_opts;
+
+    kaldi::FrameExtractionOptions frame_options;
+    frame_options.samp_freq = i_sampling_rate;
+    frame_options.frame_shift_ms = i_frame_shift_ms;
+    frame_options.frame_length_ms = i_frame_length_ms;
+    frame_options.dither = i_dither_scale;
+    frame_options.preemph_coeff = i_preemph_coeff;
+    frame_options.remove_dc_offset = i_remove_dc_offset;
+    frame_options.window_type = "povey";
+    frame_options.round_to_power_of_two = true;
+
+    kaldi::MelBanksOptions mel_bank_options;
+    mel_bank_options.num_bins = i_n_mel_banks;
+    mel_bank_options.low_freq = i_low_freq;
+    mel_bank_options.high_freq = i_high_freq;
+
+    fbank_opts.use_energy = i_use_energy;
+    fbank_opts.raw_energy = i_raw_energy;
+    fbank_opts.use_power = i_use_power;
+    fbank_opts.use_log_fbank = i_use_log_fbank;
+
+    fbank_opts.mel_opts = mel_bank_options;
+    fbank_opts.frame_opts = frame_options;
+
+    kaldi::Fbank *fbank_features_computer = new kaldi::Fbank(fbank_opts);
+    return fbank_features_computer;
+}
+
+void *ComputeFbankFeatures(void *i_waveform
+                , int i_channel
+                , bool i_subtract_mean
+                , float i_vtln_warp_local
+                , void *i_fbank_features_computer
+                , int *o_n_features
+                , int *o_n_frames
+                , int *o_err_code)
+{
+    *o_err_code = OK;
+    kaldi::WaveData *wave_data = static_cast<kaldi::WaveData *>(i_waveform);
+    kaldi::Fbank *fbank_computer = static_cast<kaldi::Fbank *>(i_fbank_features_computer);
+    kaldi::SubVector<kaldi::BaseFloat> waveform(wave_data->Data(), i_channel);
+    kaldi::Matrix<kaldi::BaseFloat> *features = new kaldi::Matrix<kaldi::BaseFloat>();
+    try
+    {
+        fbank_computer->Compute(waveform, i_vtln_warp_local, features, NULL);
+        *o_n_features = features->NumCols();
+        *o_n_frames = features->NumRows();
+        if (i_subtract_mean) {
+        kaldi::Vector<kaldi::BaseFloat> mean(features->NumCols());
+        mean.AddRowSumMat(1.0, *features);
+        mean.Scale(1.0 / features->NumRows());
+        for (int32 i = 0; i < features->NumRows(); i++)
+          features->Row(i).AddVec(-1.0, mean);
+      }
+    }
+    catch (...)
+    {
+        KALDI_WARN << "Failed to compute features for utterance.";
+        *o_err_code = INTERNAL_KALDI_ERROR;
+        return 0;
+    }
+    return features;
+}
+
+void DeleteFbankFeaturesComputer(void *o_fbank_computer)
+{
+    if(o_fbank_computer)
+    {
+        delete static_cast<kaldi::Fbank *>(o_fbank_computer);
+    }
+    o_fbank_computer = 0;
 }
 
 } //namespace kaldi_python_feat

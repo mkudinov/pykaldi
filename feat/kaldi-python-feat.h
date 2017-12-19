@@ -10,6 +10,7 @@
 #include "../util/common-utils.h"
 #include "../feat/feature-functions.h"
 #include "../feat/feature-mfcc.h"
+#include "../feat/feature-fbank.h"
 
 using namespace kaldi_python_common_errors;
 extern "C"
@@ -42,21 +43,50 @@ void *GetMfccComputer(float i_frame_length_ms
                     , float i_frame_shift_ms
                     , float i_sampling_rate
 
-                    , int i_n_mel_banks
-                    , int i_n_cepstral_coefficients
-
                     , float i_dither_scale
                     , float i_preemph_coeff
-                    , bool i_remove_dc_offset
+                    , bool  i_remove_dc_offset
+
+                    , int i_n_mel_banks
+                    , float i_high_freq
+                    , float i_low_freq
 
                     , bool i_use_energy
                     , bool i_raw_energy
+                    , int i_n_cepstral_coefficients
                     , float i_cepstral_lifter_coefficient
-                    , float i_high_freq
-                    , float i_low_freq
                     , int *o_err_code);
 
 void DeleteMfccComputer(void *o_mfcc_computer);
+
+void *GetFbankFeaturesComputer( float i_frame_length_ms
+                              , float i_frame_shift_ms
+                              , float i_sampling_rate
+
+                              , float i_dither_scale
+                              , float i_preemph_coeff
+                              , bool i_remove_dc_offset
+
+                              , int i_n_mel_banks
+                              , float i_high_freq
+                              , float i_low_freq
+
+                              , bool i_use_energy
+                              , bool i_raw_energy
+                              , bool i_use_log_fbank
+                              , bool i_use_power
+                              , int *o_err_code);
+
+void *ComputeFbankFeatures(void *i_waveform
+                , int i_channel
+                , bool i_subtract_mean
+                , float i_vtln_warp_local
+                , void *i_fbank_features_computer
+                , int *o_n_features
+                , int *o_n_frames
+                , int *o_err_code);
+
+void DeleteFbankFeaturesComputer(void *o_fbank_computer);
 } //namespace kaldi_python_feat
 } //extern "C"
 #endif
