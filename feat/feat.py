@@ -297,9 +297,10 @@ if __name__ == '__main__':
     kaldi_wav = KaldiWavData(wav_record, sr)
     mfcc_feature_extractor = KaldiMfccFeatureExtractor(frame_length_msec=25.0, frame_shift_msec=10.0, sampling_rate=22050)
     feature_matrix2 = mfcc_feature_extractor.compute(kaldi_wav)
-    #print feature_matrix2.numpy_array()
     a = feature_matrix.numpy_array()
     b = feature_matrix2.numpy_array()
     print np.linalg.norm(a-b)
-
+    melbank_feature_extractor = KaldiFbankFeatureExtractor(frame_length_msec=25.0, frame_shift_msec=10.0, sampling_rate=22050)
+    feature_matrix3 = melbank_feature_extractor.compute(kaldi_wav)
+    print feature_matrix3.numpy_array()
 
