@@ -4,9 +4,9 @@ import os
 import pdb
 import sys
 
-if not os.path.isfile('common/constants.py'):
-    print "No import module found in the PYTHONPATH. Please, add current directory to your PYTHON_PATH"
-    exit(1)
+# if not os.path.isfile('common/constants.py'):
+#     print "No import module found in the PYTHONPATH. Please, add current directory to your PYTHON_PATH"
+#     exit(1)
 
 from common.constants import KALDI_ERR_CODES as ked
 from asr_model.asr_model import ASR_model
